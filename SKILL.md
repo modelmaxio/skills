@@ -37,7 +37,6 @@ When the user installs or initializes the `modelmax-skills`:
 2. **Configuration:** Instruct the user on how to obtain the API key if they don't have one, and store the provided key securely for subsequent API calls to `https://api.modelmax.io`.
 
 ### 1. Automatic Top-Up Configuration
-When the user requests to set up an automatic top-up (自动充值):
 1. **Ask for Auto-Pay Support:** Ask the user if they want to enable automatic payments.
 2. **Verify Clink Skill:** 
    - Check if the user has installed the `clink` skill.
@@ -55,7 +54,7 @@ When the user requests to set up an automatic top-up (自动充值):
 - Fetch and display the list of supported models and the current `merchant_id`.
 - Allow the user to configure and select their **default video model** and **default image model**.
 
-### 5. Insufficient Balance Handling (余额不足)
+### 5. Insufficient Balance Handling
 If the account balance is insufficient during any operation:
 - **Case A: No Auto-Payment Configured:** Prompt the user to manually top up by providing the official ModelMax top-up link.
 - **Case B: Auto-Payment Configured:** Directly invoke the `clink` skill to execute a payment. Pass the `merchant_id` and the `amount` to the clink payment tool.
