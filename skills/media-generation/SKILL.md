@@ -39,6 +39,7 @@ Because generating high-resolution (4K) or 8s+ videos can take an extended perio
 When the user activates this skill:
 1. **Request API Key:** Ask the user to provide their ModelMax API Key.
 2. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one. The key is used to authenticate all requests to `https://api.modelmax.io`.
+3. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error (like HTTP 401 Unauthorized), inform the user and ask them to re-check and re-configure their API key.
 
 ### 1. Automatic Top-Up Configuration
 1. **Ask for Auto-Pay Support:** After initialization, explicitly ask the user if they want to enable automatic payments for media generation.
