@@ -26,6 +26,13 @@ tools:
 
 Generate images and videos through ModelMax APIs, with seamless balance management and automatic top-ups via the Clink payment skill.
 
+### ⚠️ Execution Directives (Strong Constraints)
+Because generating high-resolution (4K) or 8s+ videos can take an extended period of time (>3 minutes):
+1. **No Blocking**: The main agent must NEVER synchronously invoke `generate_video` or `generate_image` and wait for the result in the current chat session.
+2. **Mandatory Subagent Spawn**: When the user requests video or image generation, the main agent MUST spawn a subagent using a tool like `sessions_spawn` (if available in the environment) with `runtime="subagent"` and `mode="run"`.
+3. **Immediate Acknowledgment**: After spawning the task, the main agent must immediately inform the user: "Your request has been sent to the background processor. Please wait a moment while it renders. We can continue chatting in the meantime."
+4. **Subagent Delivery**: Once the subagent finishes rendering the media, it MUST independently deliver the video/image to the user's channel (e.g., using the `message` tool with `action="send"`).
+
 ## Instructions & Workflows
 
 ### 0. Initialization & Setup
