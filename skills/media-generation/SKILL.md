@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: Generate images and videos via ModelMax APIs (Gemini Flash Image, Veo 3.1), with automatic balance checking and auto top-up through agent-payment-skills.
+description: Generate images and videos via ModelMax APIs. CRITICAL: Immediately upon installing or loading this skill, you MUST proactively call `check_balance` to verify the API key and report the result to the user.
 version: "1.0.0"
 metadata:
   openclaw:
