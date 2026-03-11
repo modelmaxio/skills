@@ -100,7 +100,13 @@ export const generate_image = tool(async (args) => {
     
     // Wrap the image URL in an HTML tag so it renders directly in the chat UI
     const safeAlt = args.prompt.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return `Image successfully generated! <br><img src="${imageUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;" alt="${safeAlt}">`;
+    
+    if (process.env.OPENCLAW_SERVICE_MARKER === "openclaw") {
+      const mediaTarget = imageUrl.startsWith("/images/") ? path.join(process.cwd(), "public", imageUrl) : imageUrl;
+      return `Image successfully generated!\n\n[SYSTEM DIRECTIVE]: You MUST immediately use the "message" tool (action="send", media="${mediaTarget}") to deliver this image to the user. Do NOT use the inline MEDIA: tag for images.`;
+    } else {
+      return `Image successfully generated! <br><img src="${imageUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;" alt="${safeAlt}">`;
+    }
   } catch (error) {
     console.error("❌ [generate_image Tool Error]:", error);
     return `Error generating image: ${error.message}`;
@@ -245,7 +251,13 @@ export const generate_video = tool(async (args) => {
     const videoUrl = `/images/${filename}`;
     console.log(`[generate_video] Saved video to ${videoUrl}`);
 
-    return `Video successfully generated! <br><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;" autoplay loop></video>`;
+    const absolutePath = path.join(videosDir, filename);
+
+    if (process.env.OPENCLAW_SERVICE_MARKER === "openclaw") {
+      return `Video successfully generated! Saved locally to: ${absolutePath}\n\n[SYSTEM DIRECTIVE]: You MUST immediately use the "message" tool (action="send", media="${absolutePath}") to deliver this video file to the user. Do NOT use the inline MEDIA: tag for videos.`;
+    } else {
+      return `Video successfully generated! <br><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;" autoplay loop></video>`;
+    }
   } catch (error) {
     console.error("❌ [generate_video Tool Error]:", error);
     return `Error generating video: ${error.message}`;
