@@ -3,11 +3,20 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 
+const isOpenClaw = Boolean(process.env.OPENCLAW_HOME || process.env.OPENCLAW_STATE_DIR);
+
+function missingApiKeyMessage() {
+  if (isOpenClaw) {
+    return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-skills.apiKey sk-xxxx` or run `openclaw config set skills.entries.modelmax-skills.apiKey sk-xxxx` in their terminal.";
+  }
+  return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user to set the environment variable before starting the agent: `export MODELMAX_API_KEY=\"sk-xxxx\"`. They can get an API key at https://modelmax.io.";
+}
+
 export const get_merchant_id = tool(async () => {
   try {
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
-      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+      return missingApiKeyMessage();
     }
     const response = await fetch("https://api.modelmax.io/v1/config", {
       method: "GET",
@@ -15,16 +24,16 @@ export const get_merchant_id = tool(async () => {
         "Authorization": `Bearer ${apiKey}`
       }
     });
-    
+
     if (!response.ok) {
       return `Error fetching merchant ID: HTTP ${response.status} - ${response.statusText}`;
     }
-    
+
     const data = await response.json();
     if (data && data.clink_merchant_id) {
       return data.clink_merchant_id;
     }
-    
+
     return `Error: Unexpected API response format. Response: ${JSON.stringify(data)}`;
   } catch (error) {
     return `Error fetching merchant ID: ${error.message}`;
@@ -39,7 +48,7 @@ export const generate_image = tool(async (args) => {
   try {
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
-      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+      return missingApiKeyMessage();
     }
     const response = await fetch("https://api.modelmax.io/v1/images/generations", {
       method: "POST",
@@ -90,7 +99,8 @@ export const generate_image = tool(async (args) => {
     }
     
     // Wrap the image URL in an HTML tag so it renders directly in the chat UI
-    return `Image successfully generated! <br><img src="${imageUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;" alt="${args.prompt}">`;
+    const safeAlt = args.prompt.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return `Image successfully generated! <br><img src="${imageUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;" alt="${safeAlt}">`;
   } catch (error) {
     console.error("❌ [generate_image Tool Error]:", error);
     return `Error generating image: ${error.message}`;
@@ -100,9 +110,6 @@ export const generate_image = tool(async (args) => {
   description: "Call the ModelMax image generation model to generate an image. Returns the image HTML or 'Insufficient balance' if funds are low.",
   schema: z.object({
     prompt: z.string(),
-    image_url: z.string().optional(),
-    image_path: z.string().optional(),
-    strength: z.number().optional(),
   })
 });
 
@@ -111,12 +118,12 @@ export const generate_video = tool(async (args) => {
   try {
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
-      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+      return missingApiKeyMessage();
     }
-    
+
     // According to Veo 3.1 docs, 1080p and 4k resolutions strictly require exactly 8 seconds duration
-    let durationSecs = args.duration_seconds || 8;
-    const res = args.resolution || "720p";
+    let durationSecs = args.duration_seconds;
+    const res = args.resolution;
     if ((res === "1080p" || res === "4k") && durationSecs !== 8) {
         console.log(`[generate_video] Auto-correcting duration to 8s because resolution is ${res}`);
         durationSecs = 8;
@@ -132,10 +139,10 @@ export const generate_video = tool(async (args) => {
       body: JSON.stringify({
         prompt: args.prompt,
         parameters: {
-          aspectRatio: args.aspect_ratio || "16:9",
+          aspectRatio: args.aspect_ratio,
           resolution: res,
           durationSeconds: durationSecs,
-          generateAudio: args.generate_audio || false,
+          generateAudio: args.generate_audio,
           ...(args.start_image_url && { startImageUrl: args.start_image_url }),
           ...(args.end_image_url && { endImageUrl: args.end_image_url })
         }
@@ -161,61 +168,50 @@ export const generate_video = tool(async (args) => {
     console.log(`[generate_video] Task submitted successfully. Request ID: ${requestId}. Polling for completion...`);
 
     // 2. Poll the task status
-    let isComplete = false;
-    let videoUrl = "";
-    
+    let completedData = null;
+
     const maxWaitTimeSecs = Math.ceil(durationSecs * (120 / 8));
     const maxPolls = Math.ceil(maxWaitTimeSecs / 5);
-    
+
     for (let i = 0; i < maxPolls; i++) { // Poll based on duration
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-      
+
       try {
         const statusResponse = await fetch(`https://api.modelmax.io/v1/queue/veo-3.1/requests/${requestId}`, {
           headers: { "Authorization": `Bearer ${apiKey}` }
         });
         const statusData = await statusResponse.json();
-        
+
         const currentStatus = statusData.status || (statusData.data && statusData.data.status);
         console.log(`[generate_video] Polling status (${i+1}/${maxPolls}): ${currentStatus}`);
-        
+
         if (currentStatus === "COMPLETED" || currentStatus === "SUCCESS" || currentStatus === "succeeded") {
           if (statusData.data && Array.isArray(statusData.data) && statusData.data.length > 0 && statusData.data[0].url) {
-            isComplete = true;
-            // We found the data array!
+            completedData = statusData;
             break;
           } else {
             console.log(`[generate_video] Status is COMPLETED but data array is not yet available. Waiting...`);
-            // Continue looping and waiting for the data array to be populated by the server.
           }
         } else if (currentStatus === "FAILED" || currentStatus === "failed" || currentStatus === "ERROR") {
           return `Video generation failed during processing. Status: ${currentStatus}`;
         }
       } catch (pollError) {
         console.warn(`[generate_video] Network error during polling (${i+1}/${maxPolls}): ${pollError.message}. Retrying...`);
-        // Continue to the next iteration of the loop
       }
     }
 
-    if (!isComplete) {
+    if (!completedData) {
       return `Video is taking too long to generate (timeout after ${maxWaitTimeSecs} seconds). Request ID: ${requestId}`;
     }
 
-    // 3. Fetch the final result / download URL
-    const resultResponse = await fetch(`https://api.modelmax.io/v1/queue/veo-3.1/requests/${requestId}`, {
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-    const resultData = await resultResponse.json();
-    
-    // Extract the video URL from the array. Note: ModelMax returns relative paths in the data array.
+    // 3. Extract the video URL from the completed response
     let extractedPath = "";
-    if (resultData.data && Array.isArray(resultData.data) && resultData.data.length > 0 && resultData.data[0].url) {
-      extractedPath = resultData.data[0].url;
-    } else if (resultData.response_url) {
-      // Sometimes it returns a response_url that acts as a redirect or link to the data array
-      extractedPath = resultData.response_url;
+    if (completedData.data && Array.isArray(completedData.data) && completedData.data.length > 0 && completedData.data[0].url) {
+      extractedPath = completedData.data[0].url;
+    } else if (completedData.response_url) {
+      extractedPath = completedData.response_url;
     } else {
-      console.log(`[generate_video] ModelMax returned COMPLETED without a video URL: ${JSON.stringify(resultData)}`);
+      console.log(`[generate_video] ModelMax returned COMPLETED without a video URL: ${JSON.stringify(completedData)}`);
       return `Error: The ModelMax API reported the video is COMPLETED, but no video file was generated. This usually happens if the prompt violates safety filters on their end. DO NOT RETRY.`;
     }
 
@@ -246,7 +242,7 @@ export const generate_video = tool(async (args) => {
     }
     
     fs.writeFileSync(path.join(videosDir, filename), buffer);
-    videoUrl = `/images/${filename}`;
+    const videoUrl = `/images/${filename}`;
     console.log(`[generate_video] Saved video to ${videoUrl}`);
 
     return `Video successfully generated! <br><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;" autoplay loop></video>`;
@@ -272,7 +268,7 @@ export const check_balance = tool(async () => {
   try {
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
-      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+      return missingApiKeyMessage();
     }
     const response = await fetch("https://api.modelmax.io/v1/config", {
       method: "GET",
@@ -299,4 +295,4 @@ export const check_balance = tool(async () => {
   description: "Check the current balance of the user's ModelMax account."
 });
 
-export const modelmax_tools = [get_merchant_id, generate_image, generate_video, check_balance];
+export const media_generation_tools = [get_merchant_id, generate_image, generate_video, check_balance];
