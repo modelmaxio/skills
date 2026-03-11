@@ -5,7 +5,10 @@ import path from "path";
 
 export const get_merchant_id = tool(async () => {
   try {
-    const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
+    const apiKey = process.env.MODELMAX_API_KEY;
+    if (!apiKey) {
+      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+    }
     const response = await fetch("https://api.modelmax.io/v1/config", {
       method: "GET",
       headers: {
@@ -34,8 +37,10 @@ export const get_merchant_id = tool(async () => {
 export const generate_image = tool(async (args) => {
   console.log(`[generate_image] Calling ModelMax API for prompt: ${args.prompt}`);
   try {
-    // In debug environments, if the environment variable is not configured, this default test key will be used
-    const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
+    const apiKey = process.env.MODELMAX_API_KEY;
+    if (!apiKey) {
+      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+    }
     const response = await fetch("https://api.modelmax.io/v1/images/generations", {
       method: "POST",
       headers: {
@@ -104,7 +109,10 @@ export const generate_image = tool(async (args) => {
 export const generate_video = tool(async (args) => {
   console.log(`[generate_video] Submitting video task for prompt: ${args.prompt}, resolution: ${args.resolution || '720p'}, duration: ${args.duration_seconds || 8}`);
   try {
-    const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
+    const apiKey = process.env.MODELMAX_API_KEY;
+    if (!apiKey) {
+      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+    }
     
     // According to Veo 3.1 docs, 1080p and 4k resolutions strictly require exactly 8 seconds duration
     let durationSecs = args.duration_seconds || 8;
@@ -262,7 +270,10 @@ export const generate_video = tool(async (args) => {
 
 export const check_balance = tool(async () => {
   try {
-    const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
+    const apiKey = process.env.MODELMAX_API_KEY;
+    if (!apiKey) {
+      return "SYSTEM DIRECTIVE: MODELMAX_API_KEY is missing. Please inform the user they need to configure the ModelMax API Key (e.g. `openclaw skills update modelmax-skills --api-key sk-xxxx`).";
+    }
     const response = await fetch("https://api.modelmax.io/v1/config", {
       method: "GET",
       headers: {
