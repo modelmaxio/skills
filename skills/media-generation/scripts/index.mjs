@@ -120,7 +120,7 @@ export const generate_image = tool(async (args) => {
 });
 
 export const generate_video = tool(async (args) => {
-  console.log(`[generate_video] Submitting video task for prompt: ${args.prompt}, resolution: ${args.resolution || '720p'}, duration: ${args.duration_seconds || 8}`);
+  console.log(`[generate_video] Submitting video task for prompt: ${args.prompt}, resolution: ${args.resolution || '720p'}, duration: ${args.duration_seconds || 5}`);
   try {
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
@@ -269,7 +269,7 @@ export const generate_video = tool(async (args) => {
     prompt: z.string(),
     start_image_url: z.string().optional(),
     end_image_url: z.string().optional(),
-    duration_seconds: z.number().optional().default(8),
+    duration_seconds: z.number().optional().default(5),
     aspect_ratio: z.enum(["16:9", "9:16"]).optional().default("16:9"),
     resolution: z.enum(["720p", "1080p", "4k"]).optional().default("720p"),
     generate_audio: z.boolean().optional().default(false),
