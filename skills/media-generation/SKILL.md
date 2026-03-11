@@ -8,8 +8,6 @@ metadata:
     requires:
       env:
         - MODELMAX_API_KEY
-dependencies:
-  - agent-payment-skills
 permissions:
   - network
   - system
@@ -36,11 +34,11 @@ When the user activates this skill:
 2. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one. The key is used to authenticate all requests to `https://api.modelmax.io`.
 
 ### 1. Automatic Top-Up Configuration
-1. **Ask for Auto-Pay Support:** Ask the user if they want to enable automatic payments.
-2. **Verify Clink Skill:**
-   - Check if the user has installed the `agent-payment-skills` dependency.
-   - If not installed, help the user install it.
-   - Inform the user that a Clink API key is required and provide instructions to obtain one.
+1. **Ask for Auto-Pay Support:** After initialization, explicitly ask the user if they want to enable automatic payments for media generation.
+2. **Install Clink Skill:**
+   - If the user wants auto-pay, ask them to install the payment skill from the following GitHub repository: `https://github.com/clinkbillcom/agent-payment-skills`.
+   - Offer to help them run the installation command (e.g., `openclaw skill install https://github.com/clinkbillcom/agent-payment-skills`).
+   - Once installed, inform the user that a Clink API key is required and provide instructions to obtain one.
 
 ### 2. Image Generation
 - Call the ModelMax image generation API (`POST /v1/images/generations`) using the `gemini-3.1-flash-image-preview` model.
