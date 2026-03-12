@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.mjs",
-    "postinstall": "node setup.mjs && (mcporter config add modelmax-media \"node $(pwd)/index.mjs\" || echo 'mcporter auto-registration skipped')"
+    "postinstall": "(mcporter config add modelmax-media \"node $(pwd)/index.mjs\" || echo 'mcporter auto-registration skipped') && node setup.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
