@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "postinstall": "mcporter config add modelmax-media \"node $(pwd)/index.mjs\" || echo 'mcporter auto-registration skipped'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
