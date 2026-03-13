@@ -4,6 +4,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import fs from "fs";
 import path from "path";
 
+const BASE_URL = process.env.MODELMAX_API_BASE_URL || "https://api.modelmax.io";
+
 // 1. Initialize MCP Server
 const server = new Server({
   name: "modelmax-mcp-server",
@@ -33,6 +35,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             prompt: { type: "string" }
           },
           required: ["prompt"]
+        }
+      },
+      {
+        name: "check_recharge_status",
+        description: "Check the status of a Clink recharge order on ModelMax. Call this after receiving an order.succeeded webhook from Clink to confirm whether the recharge has been credited to the user's ModelMax account. Polls automatically for up to 60 seconds.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            order_id: { type: "string", description: "The Clink order ID from the payment webhook" }
+          },
+          required: ["order_id"]
         }
       },
       {
@@ -68,7 +81,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     if (toolName === "get_merchant_id") {
-      const response = await fetch("https://api.modelmax.io/v1/config", {
+      const response = await fetch(`${BASE_URL}/v1/config`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${apiKey}` }
       });
@@ -79,7 +92,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (toolName === "check_balance") {
-      const response = await fetch("https://api.modelmax.io/v1/config", {
+      const response = await fetch(`${BASE_URL}/v1/config`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${apiKey}` }
       });
@@ -89,9 +102,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: `Error: Unexpected API response format. Could not find balance. Response: ${JSON.stringify(data)}` }] };
     }
 
+    if (toolName === "check_recharge_status") {
+      const orderId = args.order_id;
+      if (!orderId) {
+        return { content: [{ type: "text", text: "Error: order_id is required." }] };
+      }
+
+      console.error(`[check_recharge_status] Polling recharge status for order: ${orderId}`);
+
+      const maxPolls = 12; // 12 * 5s = 60 seconds
+      for (let i = 0; i < maxPolls; i++) {
+        try {
+          const response = await fetch(`${BASE_URL}/v1/recharge/orders/${orderId}`, {
+            headers: { "Authorization": `Bearer ${apiKey}` }
+          });
+
+          if (!response.ok) {
+            console.error(`[check_recharge_status] HTTP ${response.status} on poll ${i + 1}`);
+            if (i < maxPolls - 1) {
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              continue;
+            }
+            return { content: [{ type: "text", text: `Error checking recharge status: HTTP ${response.status}. Order ID: ${orderId}` }] };
+          }
+
+          const data = await response.json();
+          const status = data.status || "unknown";
+          console.error(`[check_recharge_status] Poll ${i + 1}/${maxPolls}: status=${status}`);
+
+          if (status === "paid") {
+            return { content: [{ type: "text", text: `RECHARGE_SUCCESS: Recharge confirmed. Order ${orderId} has been credited to the ModelMax account.\nStatus: ${status}\nUpdated at: ${data.updated_at || "N/A"}\nBalance: ${data.balance !== undefined ? data.balance + " USD" : "N/A"}\n\n[SYSTEM DIRECTIVE] Recharge is confirmed. You MUST send a "✅ 充值成功" Feishu Interactive Card and resume any paused upstream task.` }] };
+          }
+
+          if (status === "failed" || status === "refunded") {
+            return { content: [{ type: "text", text: `RECHARGE_FAILED: Recharge did not succeed. Order ${orderId}.\nStatus: ${status}\nUpdated at: ${data.updated_at || "N/A"}\n\n[SYSTEM DIRECTIVE] Recharge failed. You MUST send a "❌ 充值失败" Feishu Interactive Card with order reference ${orderId} for the user to contact support.` }] };
+          }
+
+          // status is pending_payment or other — keep polling
+          if (i < maxPolls - 1) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        } catch (pollError) {
+          console.error(`[check_recharge_status] Network error: ${pollError.message}`);
+          if (i < maxPolls - 1) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        }
+      }
+
+      return { content: [{ type: "text", text: `RECHARGE_TIMEOUT: Recharge status still pending after 60 seconds. Order ID: ${orderId}.\n\n[SYSTEM DIRECTIVE] Recharge has not been confirmed within the timeout. Send a "⏳ 充值确认超时" card and suggest the user check their ModelMax account manually or contact support with order reference ${orderId}.` }] };
+    }
+
     if (toolName === "generate_image") {
       console.error(`[generate_image] Calling ModelMax API for prompt: ${args.prompt}`);
-      const response = await fetch("https://api.modelmax.io/v1/images/generations", {
+      const response = await fetch(`${BASE_URL}/v1/images/generations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +227,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       console.error(`[generate_video] Submitting video task for prompt: ${args.prompt}, resolution: ${res}, duration: ${durationSecs}`);
 
-      const submitResponse = await fetch("https://api.modelmax.io/v1/queue/veo-3.1", {
+      const submitResponse = await fetch(`${BASE_URL}/v1/queue/veo-3.1`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -210,7 +274,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       for (let i = 0; i < maxPolls; i++) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         try {
-          const statusResponse = await fetch(`https://api.modelmax.io/v1/queue/veo-3.1/requests/${requestId}`, {
+          const statusResponse = await fetch(`${BASE_URL}/v1/queue/veo-3.1/requests/${requestId}`, {
             headers: { "Authorization": `Bearer ${apiKey}` }
           });
           const statusData = await statusResponse.json();
@@ -247,7 +311,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       let downloadUrl = extractedPath;
       if (extractedPath.startsWith("/")) {
-        downloadUrl = `https://api.modelmax.io${extractedPath}`;
+        downloadUrl = `${BASE_URL}${extractedPath}`;
       }
 
       console.error(`[generate_video] Downloading video from ${downloadUrl}`);
