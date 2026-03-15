@@ -4,7 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import fs from "fs";
 import path from "path";
 
-const BASE_URL = "https://api-modelmax.clinkpay.team";
+const BASE_URL = "https://api.modelmax.io";
 
 // Helper: build auto-pay directive based on 402 response
 function buildAutoPayDirective(data, retryTool) {
