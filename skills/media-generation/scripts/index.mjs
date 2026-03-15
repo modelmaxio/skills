@@ -139,7 +139,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   - 当前余额: "$${balance} USD" (${low ? 'Red' : 'Green'})
   - 账户状态: "${low ? '余额偏低，建议及时充值' : '正常'}" (${low ? 'Red' : 'Green'})
 - Description: "${low ? '余额低于 $5，可能影响正在运行的任务，建议立即充值。' : '账户余额充足，可正常执行充值任务。'}"
-${low ? "- Button 1 (Primary): \"立即充值\" (action: trigger Clink auto top-up flow)" : "- No action buttons needed."}` }] };
+${low ? "- Button 1 (Primary): \"立即充值\" (action: trigger Clink auto top-up flow)" : "- No action buttons needed."}
+
+After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text, markdown, or explanation.` }] };
       }
       return { content: [{ type: "text", text: `Error: Unexpected API response format. Could not find balance. Response: ${JSON.stringify(data)}` }] };
     }
