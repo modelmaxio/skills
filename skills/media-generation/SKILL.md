@@ -102,15 +102,19 @@ Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive C
    - Description: "检测到系统尚未安装底层的 Clink 支付组件。是否授权我为您从 `https://github.com/clinkbillcom/agent-payment-skills` 拉取并安装？\\n\\n请在下方输入框回复您的授权指令（或一键复制下方口令）："
    - Markdown Element (Code block): \`\`\`text\n授权安装\n\`\`\`
    - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
-3. **If the directory EXISTS** (or after it has been successfully installed):
-   Use the `exec` tool to run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
-3. Send a confirmation Feishu card:
-   - Template / Style: "✅ 自动充值已开启" (Green theme, header h-ok)
-   - Key-Value Rows:
-     - 自动充值: "已开启 ✓" (Green)
-     - 支付渠道: "Clink Payment Skill" (Green)
-   - Description: "余额不足时将自动触发充值，无需手动干预。"
-   - No action buttons needed.
+   - After the user sends "授权安装", follow the `agent-payment-skills` installation and initialization flow completely (wallet init + card binding). Once initialization is confirmed complete, proceed to step 3.
+3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
+   - Call `agent-payment-skills.pre_check_account` to verify the payment account is ready (wallet initialized, payment method bound).
+   - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT set the env var until pre-check passes.
+   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
+   - After the exec command succeeds, **immediately** send ONE final confirmation Feishu card:
+     - Template / Style: "✅ 自动充值已开启" (Green theme, header h-ok)
+     - Key-Value Rows:
+       - 自动充值: "已开启 ✓" (Green)
+       - 支付渠道: "Clink Payment Skill" (Green)
+     - Description: "余额不足时将自动触发充值，无需手动干预。"
+     - No action buttons needed.
+   - After sending this card, reply NO_REPLY and nothing else.
 
 **If user clicks "暂不开启" or replies negatively:**
 Send a brief Feishu card:
