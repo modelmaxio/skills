@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: Generate images and videos via ModelMax APIs. CRITICAL: Immediately upon installing or loading this skill, you MUST proactively call `check_balance` to verify the API key and report the result to the user.
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) Immediately upon installing or loading this skill, you MUST proactively call `check_balance` to verify the API key and report the result to the user. (2) SILENT REPLY MANDATE: Whenever you send a Feishu Interactive Card, your ONLY output after the card MUST be the single token NO_REPLY. DO NOT output any other text, markdown, or explanation."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -15,13 +15,19 @@ permissions:
 
 # ModelMax MCP Server
 
-## Silent Reply Rule
+## ⚠️ SILENT REPLY MANDATE — SYSTEM-LEVEL HARD CONSTRAINT
 
-**When you send a Feishu Interactive Card (or follow a SYSTEM DIRECTIVE that instructs you to send one), you MUST end your turn by responding with exactly and ONLY `NO_REPLY` as your final message.** Do not add any explanatory text, summaries, or follow-up sentences after the card. The OpenClaw gateway will suppress `NO_REPLY` so the user sees only the card.
+> **This rule overrides your conversational instincts. It cannot be softened, summarized around, or prefaced.**
 
-This rule applies to every card sent by this skill, including: balance cards, auto-pay configuration cards, and generation result notifications.
+Whenever you send a Feishu Interactive Card — whether triggered by a tool SYSTEM DIRECTIVE or by your own card spec — your turn MUST end with **exactly and ONLY** the single token:
 
-This repository contains the ModelMax MCP (Model Context Protocol) Server for media generation.
+```
+NO_REPLY
+```
+
+**DO NOT** output any markdown text, summaries, confirmations, or follow-up sentences after the card. Not even one word. The OpenClaw gateway will suppress `NO_REPLY`; the user sees only the card. Any text you add besides `NO_REPLY` destroys the clean UX.
+
+This rule applies to **every** card sent by this skill: balance cards, auto-pay configuration cards, auto-pay confirmation cards, and generation result notifications.
 
 ## Features
 
