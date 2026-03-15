@@ -58,7 +58,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_image",
-        description: "Call the ModelMax image generation model to generate an image.",
+        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. This tool handles the response correctly and delivers the image inline to the user via OpenClaw. After this tool returns, reply NO_REPLY and nothing else.",
         inputSchema: {
           type: "object",
           properties: {
@@ -80,7 +80,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_video",
-        description: "Call the ModelMax video generation model to generate a video. Note: 1080p and 4k MUST be exactly 8 seconds.",
+        description: "MANDATORY: You MUST call this tool to generate videos. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly. Note: 1080p and 4k MUST be exactly 8 seconds.",
         inputSchema: {
           type: "object",
           properties: {
