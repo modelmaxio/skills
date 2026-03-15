@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) Immediately upon installing or loading this skill, you MUST proactively call `check_balance` to verify the API key and report the result to the user. (2) SILENT REPLY MANDATE: Whenever you send a Feishu Interactive Card, your ONLY output after the card MUST be the single token NO_REPLY. DO NOT output any other text, markdown, or explanation."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) When this skill is first installed, you MUST immediately send a Feishu Interactive Card (spec in SKILL.md §1) to confirm installation success and ask for the API Key — DO NOT use plain text. After sending the card, reply NO_REPLY and nothing else. (2) Immediately upon receiving the API Key, you MUST proactively call `check_balance` to verify it and report the result. (3) SILENT REPLY MANDATE: Whenever you send a Feishu Interactive Card, your ONLY output after the card MUST be the single token NO_REPLY. DO NOT output any other text, markdown, or explanation."
 version: "1.0.0"
 metadata:
   openclaw:
