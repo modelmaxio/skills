@@ -27,7 +27,7 @@ NO_REPLY
 
 **DO NOT** output any markdown text, summaries, confirmations, or follow-up sentences after the card. Not even one word. The OpenClaw gateway will suppress `NO_REPLY`; the user sees only the card. Any text you add besides `NO_REPLY` destroys the clean UX.
 
-This rule applies to **every** card sent by this skill: balance cards, auto-pay configuration cards, auto-pay confirmation cards, and generation result notifications.
+This rule applies to **every** card sent by this skill: balance cards, auto-pay configuration cards, auto-pay confirmation cards, generation result notifications, and uninstall confirmation cards.
 
 ## Features
 
@@ -85,3 +85,25 @@ Send a brief Feishu card:
 - Template / Style: "💡 自动充值未开启" (Grey theme, header h-grey)
 - Description: "余额不足时可前往 www.modelmax.io 手动充值，或随时告诉我开启自动充值。"
 - No action buttons needed.
+
+### 3. Uninstall
+When the user asks to uninstall this skill, the agent MUST:
+1. Remove the MCP server registration:
+   ```bash
+   mcporter config remove modelmax-media
+   ```
+   If `mcporter` is unavailable, manually remove the entry from the MCP config.
+2. Delete the skill directory:
+   ```bash
+   rm -rf ~/.openclaw/workspace/skills/modelmax-media-generation
+   ```
+3. Remove `MODELMAX_API_KEY` and `MODELMAX_AUTO_PAY` from `openclaw.json` skill env config.
+4. **Send a Feishu Interactive Card — DO NOT use plain text:**
+   - Template / Style: "🗑️ ModelMax Skill 已卸载" (Grey theme, header h-grey)
+   - Key-Value Rows:
+     - MCP 注册: "已清除 ✓" (Grey)
+     - 插件目录: "已删除 ✓" (Grey)
+     - API Key: "已移除 ✓" (Grey)
+   - Description: "ModelMax 图片/视频生成功能已完全移除。如需重新安装，请告知我。"
+   - No action buttons needed.
+5. Reply `NO_REPLY` and nothing else.
