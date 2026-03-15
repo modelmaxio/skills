@@ -51,10 +51,21 @@ When an Agent is instructed to install this skill, it MUST follow these steps:
    ```
 
 ### 1. Initialization & Setup
-When the user activates this skill:
-1. **Request API Key:** Ask the user to provide their ModelMax API Key.
-2. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one.
-3. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error, inform the user to re-check their API key.
+When the user activates this skill, you MUST follow these steps in order:
+
+1. **Send Install Success Card** — BEFORE asking for anything, immediately send a Feishu Interactive Card:
+   - Template / Style: "✅ ModelMax Skills 安装成功！" (Green theme, header h-ok)
+   - Key-Value Rows:
+     - MCP 组件: "modelmax-media 已注册 ✓" (Green)
+     - API Key: "待配置" (Grey)
+     - 自动充值: "待配置" (Grey)
+   - Description: "请直接将你的 ModelMax API Key 发送给我以完成激活（如还没有，请前往 ModelMax 官网获取）。"
+   - No action buttons needed.
+   - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text.
+
+2. **Request API Key:** Wait for the user to provide their ModelMax API Key.
+3. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one.
+4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error, inform the user to re-check their API key.
 
 ### 2. Automatic Top-Up Configuration
 Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive Card to ask about Auto-Pay:
