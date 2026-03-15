@@ -214,7 +214,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
         })
       });
       const data = await response.json();
-      
+
       if (!response.ok || data.error) {
         const errorMsg = data.error?.message || response.statusText;
         if (errorMsg.toLowerCase().includes("balance") || response.status === 402) {
@@ -226,39 +226,39 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
         }
         return { content: [{ type: "text", text: `Error generating image: ${errorMsg}` }] };
       }
-      
-      let imageUrl = data.data && data.data[0] ? data.data[0].url : "";
-      let absolutePath = "";
-      const imagesDir = path.join(process.cwd(), "public", "images");
-      if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 
-      if (imageUrl.startsWith("data:image/")) {
-        const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-        if (matches) {
-          const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
-          const base64Data = matches[2];
-          const filename = `generated_${Date.now()}.${ext}`;
-          absolutePath = path.join(imagesDir, filename);
-          fs.writeFileSync(absolutePath, base64Data, "base64");
-          console.error(`[generate_image] Saved Base64 image to ${absolutePath}`);
-        }
-      } else if (imageUrl.startsWith("http")) {
-        const ext = "jpg"; // simplified
-        const filename = `generated_${Date.now()}.${ext}`;
-        absolutePath = path.join(imagesDir, filename);
-        const imgResponse = await fetch(imageUrl);
-        const arrayBuffer = await imgResponse.arrayBuffer();
-        fs.writeFileSync(absolutePath, Buffer.from(arrayBuffer));
-        console.error(`[generate_image] Downloaded URL image to ${absolutePath}`);
-      } else {
+      const imageUrl = data.data && data.data[0] ? data.data[0].url : "";
+      if (!imageUrl) {
         return { content: [{ type: "text", text: `Error: No valid image URL returned. Data: ${JSON.stringify(data)}` }] };
       }
 
+      // Fetch the image and return as MCP image content — OpenClaw handles display natively
+      let base64Data = "";
+      let mimeType = "image/jpeg";
+      if (imageUrl.startsWith("data:image/")) {
+        const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = `image/${matches[1]}`;
+          base64Data = matches[2];
+        }
+      } else if (imageUrl.startsWith("http")) {
+        const imgResponse = await fetch(imageUrl);
+        const contentType = imgResponse.headers.get("content-type") || "image/jpeg";
+        mimeType = contentType.split(";")[0];
+        const arrayBuffer = await imgResponse.arrayBuffer();
+        base64Data = Buffer.from(arrayBuffer).toString("base64");
+        console.error(`[generate_image] Fetched image from URL, size: ${arrayBuffer.byteLength} bytes`);
+      }
+
+      if (!base64Data) {
+        return { content: [{ type: "text", text: `Error: Could not fetch image data from URL: ${imageUrl}` }] };
+      }
+
       return {
-        content: [{ 
-          type: "text", 
-          text: `Image successfully generated! Saved locally to: ${absolutePath}\n\n[SYSTEM DIRECTIVE]: You MUST immediately use the "message" tool (action="send", media="${absolutePath}") to deliver this image file to the user.` 
-        }]
+        content: [
+          { type: "image", data: base64Data, mimeType },
+          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. The image content above is delivered to the user as an inline image. Reply NO_REPLY and nothing else.` }
+        ]
       };
     }
 
