@@ -15,6 +15,12 @@ permissions:
 
 # ModelMax MCP Server
 
+## Silent Reply Rule
+
+**When you send a Feishu Interactive Card (or follow a SYSTEM DIRECTIVE that instructs you to send one), you MUST end your turn by responding with exactly and ONLY `NO_REPLY` as your final message.** Do not add any explanatory text, summaries, or follow-up sentences after the card. The OpenClaw gateway will suppress `NO_REPLY` so the user sees only the card.
+
+This rule applies to every card sent by this skill, including: balance cards, auto-pay configuration cards, and generation result notifications.
+
 This repository contains the ModelMax MCP (Model Context Protocol) Server for media generation.
 
 ## Features
