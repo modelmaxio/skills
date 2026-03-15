@@ -58,7 +58,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_image",
-        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. This tool handles the response correctly and delivers the image inline to the user via OpenClaw. After this tool returns, reply NO_REPLY and nothing else.",
+        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. This tool handles the response correctly and delivers the image inline to the user via OpenClaw. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. Your ONLY output after this tool call MUST be the single token NO_REPLY.",
         inputSchema: {
           type: "object",
           properties: {
@@ -80,7 +80,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_video",
-        description: "MANDATORY: You MUST call this tool to generate videos. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly. Note: 1080p and 4k MUST be exactly 8 seconds.",
+        description: "MANDATORY: You MUST call this tool to generate videos. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly. Note: 1080p and 4k MUST be exactly 8 seconds. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. After sending the video via the message tool, your ONLY output MUST be the single token NO_REPLY.",
         inputSchema: {
           type: "object",
           properties: {
@@ -257,7 +257,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [
           { type: "image", data: base64Data, mimeType },
-          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. OpenClaw has ALREADY displayed the image inline to the user in the chat — you do NOT need to upload it to Feishu, save it to disk, use curl, or take any further action. The image is already visible. DO NOT attempt any Feishu image upload. Reply NO_REPLY and nothing else.` }
+          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. OpenClaw has ALREADY displayed the image inline to the user in the chat. DO NOT output any text, summary, confirmation, or explanation. DO NOT upload to Feishu. DO NOT use curl. Your ONLY output MUST be the single token NO_REPLY — nothing else.` }
         ]
       };
     }
@@ -381,7 +381,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [{ 
           type: "text", 
-          text: `Video successfully generated! Saved locally to: ${absolutePath}\n\n[SYSTEM DIRECTIVE]: You MUST immediately use the "message" tool (action="send", media="${absolutePath}") to deliver this video file to the user.` 
+          text: `Video successfully generated! Saved locally to: ${absolutePath}\n\n[SYSTEM DIRECTIVE] You MUST immediately use the "message" tool (action="send", media="${absolutePath}") to deliver this video file to the user. After the message tool call completes, your ONLY output MUST be the single token NO_REPLY — DO NOT output any text, summary, or explanation before or after.`
         }]
       };
     }
