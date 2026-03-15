@@ -41,14 +41,35 @@ When an Agent is instructed to install this skill, it MUST follow these steps:
 ### 1. Initialization & Setup
 When the user activates this skill:
 1. **Request API Key:** Ask the user to provide their ModelMax API Key.
-2. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one. 
+2. **Configuration:** Guide the user to obtain an API key from ModelMax if they don't have one.
 3. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error, inform the user to re-check their API key.
 
 ### 2. Automatic Top-Up Configuration
-1. **Ask for Auto-Pay Support:** Immediately after initialization, explicitly ask the user if they want to enable automatic payments for media generation.
-2. **Setup Auto-Pay:**
-   - If the user wants auto-pay, ask them to install the payment skill from the following GitHub repository: `https://github.com/clinkbillcom/agent-payment-skills`.
-   - Offer to help them run the installation command (e.g., `openclaw skill install https://github.com/clinkbillcom/agent-payment-skills`).
-   - Once the payment skill is successfully installed, you MUST set the auto-pay flag to true in the skill's environment. For example, run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
-   - Inform the user that a Clink API key is required and provide instructions to obtain one.
-3. **Opt-Out:** If the user declines auto-pay, acknowledge their choice and let them know they can manually top up at `www.modelmax.io` if their balance runs out.
+Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive Card to ask about Auto-Pay:
+
+**Card spec:**
+- Template / Style: "⚡ ModelMax 自动充值配置" (Blue theme, header h-blue)
+- Key-Value Rows:
+  - API Key 状态: "已验证 ✓" (Green)
+  - 当前余额: "[balance from check_balance] USD" (Green or Red based on level)
+  - 自动充值: "未开启" (Grey)
+- Description: "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。是否开启？"
+- Button 1 (Primary / Green): "开启自动充值"
+- Button 2 (Ghost): "暂不开启"
+
+**If user clicks "开启自动充值" or replies affirmatively:**
+1. Check if `agent-payment-skills` is already installed. If not, offer to install it: `openclaw skill install https://github.com/clinkbillcom/agent-payment-skills`
+2. Once the payment skill is confirmed installed, run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
+3. Send a confirmation Feishu card:
+   - Template / Style: "✅ 自动充值已开启" (Green theme, header h-ok)
+   - Key-Value Rows:
+     - 自动充值: "已开启 ✓" (Green)
+     - 支付渠道: "Clink Payment Skill" (Green)
+   - Description: "余额不足时将自动触发充值，无需手动干预。"
+   - No action buttons needed.
+
+**If user clicks "暂不开启" or replies negatively:**
+Send a brief Feishu card:
+- Template / Style: "💡 自动充值未开启" (Grey theme, header h-grey)
+- Description: "余额不足时可前往 www.modelmax.io 手动充值，或随时告诉我开启自动充值。"
+- No action buttons needed.
