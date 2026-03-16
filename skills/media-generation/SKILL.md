@@ -80,11 +80,13 @@ Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive C
   - API Key 状态: "已验证 ✓" (Green)
   - 当前余额: "[balance from check_balance] USD" (Green or Red based on level)
   - 自动充值: "未开启" (Grey)
-- Description: "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。是否开启？"
-- Button 1 (Primary / Green): "开启自动充值"
-- Button 2 (Ghost): "暂不开启"
+- Description: "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」："
+- Markdown Element (Code block): ```text\n开启自动充值\n```
+- No action buttons needed.
 
-**If user clicks "开启自动充值" or replies affirmatively:**
+**Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "开启自动充值".
+
+**If user replies "开启自动充值":**
 1. **MANDATORY CHECK**: You MUST execute the `exec` tool with the command `ls -la ~/.openclaw/workspace/skills/agent-payment-skills` to physically verify if the payment skill is installed. DO NOT rely on your conversation memory.
 2. **If the directory DOES NOT exist**:
    You MUST pause the setup and immediately send a Feishu Interactive Card to the user:
@@ -109,11 +111,8 @@ Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive C
      - No action buttons needed.
    - After sending this card, reply NO_REPLY and nothing else.
 
-**If user clicks "暂不开启" or replies negatively:**
-Send a brief Feishu card:
-- Template / Style: "💡 自动充值未开启" (Grey theme, header h-grey)
-- Description: "余额不足时可前往 www.modelmax.io 手动充值，或随时告诉我开启自动充值。"
-- No action buttons needed.
+**If user does not reply "开启自动充值" (any other reply, or no reply, or silence):**
+Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.
 
 ### 3. Uninstall
 When the user asks to uninstall this skill, the agent MUST:
