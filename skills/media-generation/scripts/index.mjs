@@ -61,7 +61,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_image",
-        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, scripts, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. DO NOT write your own polling scripts. DO NOT write your own Feishu upload scripts. This tool handles everything internally: API call, polling, base64 decode, and delivery. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. Your ONLY output after this tool call MUST be the single token NO_REPLY.",
+        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, scripts, or any shell command to call the ModelMax API directly. This tool handles everything internally: API call, download, and saving to disk. After this tool returns a file path, call the 'message' tool with action='send' media='{path}'. After that single message tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it.",
         inputSchema: {
           type: "object",
           properties: {
@@ -237,33 +237,41 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
         return { content: [{ type: "text", text: `Error: No valid image URL returned. Data: ${JSON.stringify(data)}` }] };
       }
 
-      // Fetch the image and return as MCP image content — OpenClaw handles display natively
-      let base64Data = "";
-      let mimeType = "image/jpeg";
+      // Download image and save to disk, then deliver via message tool (same pattern as generate_video)
+      let imageBuffer;
+      let ext = "png";
       if (imageUrl.startsWith("data:image/")) {
         const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-        if (matches) {
-          mimeType = `image/${matches[1]}`;
-          base64Data = matches[2];
+        if (!matches) {
+          return { content: [{ type: "text", text: `Error: Could not decode data URL from ModelMax response.` }] };
         }
+        ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+        imageBuffer = Buffer.from(matches[2], "base64");
+        console.error(`[generate_image] Decoded base64 image, size: ${imageBuffer.length} bytes`);
       } else if (imageUrl.startsWith("http")) {
         const imgResponse = await fetch(imageUrl);
-        const contentType = imgResponse.headers.get("content-type") || "image/jpeg";
-        mimeType = contentType.split(";")[0];
-        const arrayBuffer = await imgResponse.arrayBuffer();
-        base64Data = Buffer.from(arrayBuffer).toString("base64");
-        console.error(`[generate_image] Fetched image from URL, size: ${arrayBuffer.byteLength} bytes`);
+        if (!imgResponse.ok) {
+          return { content: [{ type: "text", text: `Error: Failed to download image (HTTP ${imgResponse.status}).` }] };
+        }
+        const contentType = imgResponse.headers.get("content-type") || "image/png";
+        ext = contentType.includes("jpeg") ? "jpg" : "png";
+        imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+        console.error(`[generate_image] Downloaded image from URL, size: ${imageBuffer.length} bytes`);
+      } else {
+        return { content: [{ type: "text", text: `Error: Unrecognised image URL format: ${imageUrl}` }] };
       }
 
-      if (!base64Data) {
-        return { content: [{ type: "text", text: `Error: Could not fetch image data from URL: ${imageUrl}` }] };
-      }
+      const imagesDir = path.join(os.homedir(), ".openclaw", "tmp");
+      if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
+      const absolutePath = path.join(imagesDir, `generated_image_${Date.now()}.${ext}`);
+      fs.writeFileSync(absolutePath, imageBuffer);
+      console.error(`[generate_image] Saved image to ${absolutePath}`);
 
       return {
-        content: [
-          { type: "image", data: base64Data, mimeType },
-          { type: "text", text: `[SYSTEM DIRECTIVE] Image delivered inline. Output NO_REPLY and NOTHING else. DO NOT output any text before or after this. DO NOT upload to Feishu. DO NOT use curl. NO_REPLY is your complete response.` }
-        ]
+        content: [{
+          type: "text",
+          text: `[SYSTEM DIRECTIVE] Image saved to: ${absolutePath}. Call the "message" tool now with action="send" media="${absolutePath}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it. NO_REPLY is your complete response.`
+        }]
       };
     }
 

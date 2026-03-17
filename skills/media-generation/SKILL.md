@@ -61,7 +61,7 @@ Replace `{SKILL_DIR}` with the actual skill directory path (e.g. `~/.openclaw/wo
 
 ## Features
 
-- `generate_image`: Generates an image using ModelMax.
+- `generate_image`: Generates an image using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns, call the `message` tool with the file path, then output `NO_REPLY` and nothing else.
 - `generate_video`: Generates a video using ModelMax.
 - `get_merchant_id`: Retrieves the ModelMax merchant ID.
 - `check_balance`: Checks your current ModelMax API balance.
