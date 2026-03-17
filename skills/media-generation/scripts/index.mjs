@@ -32,7 +32,7 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 1. Invoke \`agent-payment-skills.pre_check_account\` to verify wallet and payment method are ready. This will display a "🔍 Clink 账户检测通过" card to the user.
    - If pre-check fails, follow its instructions to fix (initialize wallet / bind card) before proceeding.
 2. Call \`get_payment_config\` to obtain the merchant ID and default recharge amount.
-3. Invoke \`agent-payment-skills.clink_pay\` using the merchant_id and default_recharge_amount returned by \`get_payment_config\`. Do NOT ask the user for an amount.
+3. Invoke \`agent-payment-skills.clink_pay\` using the merchant_id and default_amount returned by \`get_payment_config\`. Do NOT ask the user for an amount.
    If you must call via shell, use this EXACT command (do NOT omit --args, replace placeholders):
    \`\`\`
    npx mcporter call agent-payment-skills clink_pay --args '{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD"}'
@@ -56,7 +56,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "get_payment_config",
-        description: "Retrieve ModelMax payment config: merchant_id, default_recharge_amount, and currency.",
+        description: "Retrieve ModelMax payment config: merchant_id, default_amount, and currency.",
         inputSchema: { type: "object", properties: {} }
       },
       {
@@ -127,7 +127,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
       if (!response.ok) return { content: [{ type: "text", text: `Error fetching merchant ID: HTTP ${response.status} - ${response.statusText}` }] };
       const data = await response.json();
-      if (data && data.clink_merchant_id) return { content: [{ type: "text", text: JSON.stringify({ merchant_id: data.clink_merchant_id, default_recharge_amount: 10, currency: "USD" }) }] };
+      if (data && data.clink_merchant_id) return { content: [{ type: "text", text: JSON.stringify({ merchant_id: data.clink_merchant_id, default_amount: 10, currency: "USD" }) }] };
       return { content: [{ type: "text", text: `Error: Unexpected API response format. Response: ${JSON.stringify(data)}` }] };
     }
 
