@@ -49,20 +49,35 @@ This skill includes a standalone card-sending script that requires no external d
 node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id oc_xxx
 
 # Send dynamic card (inline JSON)
-node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"schema":"2.0",...}' --chat-id oc_xxx
+node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"config":{},"header":{},"elements":[]}' --chat-id oc_xxx
 
 # Send to a user (open_id)
 node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --open-id ou_xxx
 ```
 
+## Sending Feishu Images and Videos
+
+Use `send-feishu-media.mjs` to upload and send images/videos to Feishu. Images are uploaded via the Feishu image API and rendered inline (not as a file attachment). Videos are uploaded as files.
+
+```bash
+# Send image (renders inline in Feishu)
+node {SKILL_DIR}/scripts/send-feishu-media.mjs /path/to/image.png --chat-id oc_xxx
+
+# Send video
+node {SKILL_DIR}/scripts/send-feishu-media.mjs /path/to/video.mp4 --chat-id oc_xxx
+```
+
+**IMPORTANT:** When `generate_image` or `generate_video` returns a SYSTEM DIRECTIVE with a file path, you MUST use `send-feishu-media.mjs` (via exec) to deliver it. DO NOT use the `message` tool — it sends files as generic attachments and images will not render inline.
+
 Replace `{SKILL_DIR}` with the actual skill directory path (e.g. `~/.openclaw/workspace/skills/modelmax-media-generation`).
 
 **Non-Feishu channels:** If the current channel is not Feishu, skip all card-sending steps and use plain text equivalents instead.
 
+
 ## Features
 
-- `generate_image`: Generates an image using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns, call the `message` tool with the file path, then output `NO_REPLY` and nothing else.
-- `generate_video`: Generates a video using ModelMax.
+- `generate_image`: Generates an image using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns a SYSTEM DIRECTIVE, run `send-feishu-media.mjs` via exec to deliver the image inline.
+- `generate_video`: Generates a video using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns a SYSTEM DIRECTIVE, run `send-feishu-media.mjs` via exec to deliver the video.
 - `get_merchant_id`: Retrieves the ModelMax merchant ID.
 - `check_balance`: Checks your current ModelMax API balance.
 

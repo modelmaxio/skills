@@ -215,7 +215,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
           prompt: args.prompt,
           n: 1,
           size: "1024x1024",
-          response_format: "url"
+          response_format: "b64_json"
         })
       });
       const data = await response.json();
@@ -232,33 +232,53 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
         return { content: [{ type: "text", text: `Error generating image: ${errorMsg}` }] };
       }
 
-      const imageUrl = data.data && data.data[0] ? data.data[0].url : "";
-      if (!imageUrl) {
-        return { content: [{ type: "text", text: `Error: No valid image URL returned. Data: ${JSON.stringify(data)}` }] };
+      // Support b64_json (preferred) and url (fallback)
+      const item = data.data && data.data[0];
+      if (!item) {
+        return { content: [{ type: "text", text: `Error: No image data returned. Data: ${JSON.stringify(data)}` }] };
       }
 
-      // Download image and save to disk, then deliver via message tool (same pattern as generate_video)
       let imageBuffer;
       let ext = "png";
-      if (imageUrl.startsWith("data:image/")) {
-        const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-        if (!matches) {
-          return { content: [{ type: "text", text: `Error: Could not decode data URL from ModelMax response.` }] };
+
+      if (item.b64_json) {
+        // b64_json: raw base64, no data: prefix
+        imageBuffer = Buffer.from(item.b64_json, "base64");
+        console.error(`[generate_image] Decoded b64_json, size: ${imageBuffer.length} bytes`);
+      } else if (item.url) {
+        const imageUrl = item.url;
+        if (imageUrl.startsWith("data:image/")) {
+          const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+          if (!matches) {
+            return { content: [{ type: "text", text: `Error: Could not decode data URL from ModelMax response.` }] };
+          }
+          ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+          imageBuffer = Buffer.from(matches[2], "base64");
+          console.error(`[generate_image] Decoded data URL image, size: ${imageBuffer.length} bytes`);
+        } else if (imageUrl.startsWith("http")) {
+          const imgResponse = await fetch(imageUrl);
+          if (!imgResponse.ok) {
+            return { content: [{ type: "text", text: `Error: Failed to download image (HTTP ${imgResponse.status}).` }] };
+          }
+          const contentType = imgResponse.headers.get("content-type") || "";
+          if (!contentType.startsWith("image/")) {
+            return { content: [{ type: "text", text: `Error: URL did not return an image (content-type: ${contentType}). The URL may have expired.` }] };
+          }
+          if (contentType.includes("jpeg")) ext = "jpg";
+          else if (contentType.includes("webp")) ext = "webp";
+          else if (contentType.includes("gif")) ext = "gif";
+          else ext = "png";
+          imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+          console.error(`[generate_image] Downloaded image from URL, size: ${imageBuffer.length} bytes, type: ${contentType}`);
+        } else {
+          return { content: [{ type: "text", text: `Error: Unrecognised image URL format.` }] };
         }
-        ext = matches[1] === "jpeg" ? "jpg" : matches[1];
-        imageBuffer = Buffer.from(matches[2], "base64");
-        console.error(`[generate_image] Decoded base64 image, size: ${imageBuffer.length} bytes`);
-      } else if (imageUrl.startsWith("http")) {
-        const imgResponse = await fetch(imageUrl);
-        if (!imgResponse.ok) {
-          return { content: [{ type: "text", text: `Error: Failed to download image (HTTP ${imgResponse.status}).` }] };
-        }
-        const contentType = imgResponse.headers.get("content-type") || "image/png";
-        ext = contentType.includes("jpeg") ? "jpg" : "png";
-        imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
-        console.error(`[generate_image] Downloaded image from URL, size: ${imageBuffer.length} bytes`);
       } else {
-        return { content: [{ type: "text", text: `Error: Unrecognised image URL format: ${imageUrl}` }] };
+        return { content: [{ type: "text", text: `Error: No b64_json or url in response. Data: ${JSON.stringify(data)}` }] };
+      }
+
+      if (!imageBuffer || imageBuffer.length < 100) {
+        return { content: [{ type: "text", text: `Error: Image data is empty or too small (${imageBuffer?.length ?? 0} bytes). Generation may have failed.` }] };
       }
 
       const imagesDir = path.join(os.homedir(), ".openclaw", "tmp");
@@ -270,7 +290,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [{
           type: "text",
-          text: `[SYSTEM DIRECTIVE] Image saved to: ${absolutePath}. Call the "message" tool now with action="send" media="${absolutePath}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it. NO_REPLY is your complete response.`
+          text: `[SYSTEM DIRECTIVE] Image saved to: ${absolutePath}. You MUST now run this command via exec: node {SKILL_DIR}/scripts/send-feishu-media.mjs "${absolutePath}" --chat-id {current_feishu_chat_id}. After the exec completes: output NO_REPLY and NOTHING else. DO NOT output any text. DO NOT use the message tool. Use exec only.`
         }]
       };
     }
@@ -392,7 +412,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [{
           type: "text",
-          text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. Call the "message" tool now with action="send" media="${absolutePath}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it. DO NOT use curl. DO NOT explain. NO_REPLY is your complete response.`
+          text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. You MUST now run this command via exec: node {SKILL_DIR}/scripts/send-feishu-media.mjs "${absolutePath}" --chat-id {current_feishu_chat_id}. After the exec completes: output NO_REPLY and NOTHING else. DO NOT output any text. DO NOT use the message tool. Use exec only.`
         }]
       };
     }
