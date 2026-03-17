@@ -103,25 +103,23 @@ Immediately after `check_balance` succeeds, you MUST send a card to ask about Au
 node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '<CARD_JSON>' --chat-id {current_feishu_chat_id}
 ```
 
-Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the actual value from `check_balance`:
+Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the actual value from `check_balance`. Use single quotes around the JSON to prevent shell interpolation:
 ```json
 {
-  "schema": "2.0",
-  "header": { "title": { "tag": "plain_text", "content": "⚡ ModelMax 自动充值配置" }, "template": "blue" },
-  "body": {
-    "elements": [
-      {
-        "tag": "column_set", "flex_mode": "none",
-        "columns": [
-          { "tag": "column", "elements": [{ "tag": "markdown", "content": "**API Key 状态**\n**当前余额**\n**自动充值**" }] },
-          { "tag": "column", "elements": [{ "tag": "markdown", "content": "<font color='green'>已验证 ✓</font>\n<font color='green'>${balance} USD</font>\n<font color='grey'>未开启</font>" }] }
-        ]
-      },
-      { "tag": "hr" },
-      { "tag": "markdown", "content": "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：" },
-      { "tag": "markdown", "content": "```text\n开启自动充值\n```" }
-    ]
-  }
+  "config": { "wide_screen_mode": true },
+  "header": { "title": { "content": "⚡ ModelMax 自动充值配置", "tag": "plain_text" }, "template": "blue" },
+  "elements": [
+    {
+      "tag": "div",
+      "text": {
+        "content": "**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='green'>{balance} USD</font>\n**自动充值**　　<font color='grey'>未开启</font>",
+        "tag": "lark_md"
+      }
+    },
+    { "tag": "hr" },
+    { "tag": "div", "text": { "content": "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：", "tag": "lark_md" } },
+    { "tag": "div", "text": { "content": "```\n开启自动充值\n```", "tag": "lark_md" } }
+  ]
 }
 ```
 
