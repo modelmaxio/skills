@@ -16,15 +16,10 @@
         "content": "请直接将你的 **ModelMax API Key** 发送给我以完成激活。"
       },
       {
-        "tag": "action",
-        "actions": [
-          {
-            "tag": "button",
-            "text": { "content": "🔑 获取 API Key", "tag": "plain_text" },
-            "type": "primary",
-            "url": "https://www.modelmax.io/dashboard/keys"
-          }
-        ]
+        "tag": "button",
+        "text": { "content": "🔑 获取 API Key", "tag": "plain_text" },
+        "type": "primary",
+        "url": "https://www.modelmax.io/dashboard/keys"
       }
     ]
   }
