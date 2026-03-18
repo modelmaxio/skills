@@ -155,7 +155,9 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
      ```
    - **Non-Feishu channel:** Send plain text: "⚠️ Clink payment component not installed. Please install from https://github.com/clinkbillcom/agent-payment-skills"
    - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
-   - Follow the `agent-payment-skills` installation flow completely (pre_install → restart → wallet init + card binding). Once initialization is confirmed complete, proceed to step 3.
+   - Follow the `agent-payment-skills` installation flow completely (pre_install → restart → wallet init + card binding).
+   - Once initialization is confirmed complete, you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending 402 auto-pay flow now.`
+   - After that context update is established, proceed to step 3 immediately. Do NOT restart the install check loop.
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
    - Call `agent-payment-skills.pre_check_account` (do NOT omit --args):
      ```
