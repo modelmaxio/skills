@@ -1,35 +1,31 @@
 {
-  "config": { "wide_screen_mode": true },
+  "schema": "2.0",
   "header": {
     "title": { "content": "✅ ModelMax Skills 安装成功！", "tag": "plain_text" },
     "template": "green"
   },
-  "elements": [
-    {
-      "tag": "div",
-      "text": {
-        "content": "<font color='green'>**MCP 组件**</font>　　modelmax-media 已注册 ✓\n<font color='grey'>**API Key**</font>　　　　待配置\n<font color='grey'>**自动充值**</font>　　　　待配置",
-        "tag": "lark_md"
+  "body": {
+    "elements": [
+      {
+        "tag": "markdown",
+        "content": "<font color='green'>**MCP 组件**</font>　　modelmax-media 已注册 ✓\n<font color='grey'>**API Key**</font>　　　　待配置\n<font color='grey'>**自动充值**</font>　　　　待配置"
+      },
+      { "tag": "hr" },
+      {
+        "tag": "markdown",
+        "content": "请直接将你的 **ModelMax API Key** 发送给我以完成激活。"
+      },
+      {
+        "tag": "action",
+        "actions": [
+          {
+            "tag": "button",
+            "text": { "content": "🔑 获取 API Key", "tag": "plain_text" },
+            "type": "primary",
+            "url": "https://www.modelmax.io/dashboard/keys"
+          }
+        ]
       }
-    },
-    { "tag": "hr" },
-    {
-      "tag": "div",
-      "text": {
-        "content": "请直接将你的 **ModelMax API Key** 发送给我以完成激活。",
-        "tag": "lark_md"
-      }
-    },
-    {
-      "tag": "action",
-      "actions": [
-        {
-          "tag": "button",
-          "text": { "content": "🔑 获取 API Key", "tag": "plain_text" },
-          "type": "primary",
-          "url": "https://www.modelmax.io/dashboard/keys"
-        }
-      ]
-    }
-  ]
+    ]
+  }
 }

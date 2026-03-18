@@ -1,24 +1,20 @@
 {
-  "config": { "wide_screen_mode": true },
+  "schema": "2.0",
   "header": {
     "title": { "content": "🗑️ ModelMax Skill 已卸载", "tag": "plain_text" },
     "template": "grey"
   },
-  "elements": [
-    {
-      "tag": "div",
-      "text": {
-        "content": "<font color='grey'>**MCP 注册**</font>　　已清除 ✓\n<font color='grey'>**插件目录**</font>　　已删除 ✓\n<font color='grey'>**API Key**</font>　　　已移除 ✓",
-        "tag": "lark_md"
+  "body": {
+    "elements": [
+      {
+        "tag": "markdown",
+        "content": "<font color='grey'>**MCP 注册**</font>　　已清除 ✓\n<font color='grey'>**插件目录**</font>　　已删除 ✓\n<font color='grey'>**API Key**</font>　　　已移除 ✓"
+      },
+      { "tag": "hr" },
+      {
+        "tag": "markdown",
+        "content": "ModelMax 图片/视频生成功能已完全移除。如需重新安装，请告知我。"
       }
-    },
-    { "tag": "hr" },
-    {
-      "tag": "div",
-      "text": {
-        "content": "ModelMax 图片/视频生成功能已完全移除。如需重新安装，请告知我。",
-        "tag": "lark_md"
-      }
-    }
-  ]
+    ]
+  }
 }

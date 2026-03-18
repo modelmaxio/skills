@@ -1,28 +1,24 @@
 {
-  "config": { "wide_screen_mode": true },
+  "schema": "2.0",
   "header": {
     "title": { "content": "⚠️ 缺少支付组件依赖", "tag": "plain_text" },
     "template": "yellow"
   },
-  "elements": [
-    {
-      "tag": "div",
-      "text": {
-        "content": "<font color='red'>**Clink 支付组件**</font>　　未安装\n<font color='orange'>**自动充值功能**</font>　　暂停配置",
-        "tag": "lark_md"
+  "body": {
+    "elements": [
+      {
+        "tag": "markdown",
+        "content": "<font color='red'>**Clink 支付组件**</font>　　未安装\n<font color='orange'>**自动充值功能**</font>　　暂停配置"
+      },
+      { "tag": "hr" },
+      {
+        "tag": "markdown",
+        "content": "检测到系统尚未安装底层的 Clink 支付组件。是否授权我为您从 `https://github.com/clinkbillcom/agent-payment-skills` 拉取并安装？\n\n请在下方输入框回复您的授权指令（或一键复制下方口令）："
+      },
+      {
+        "tag": "markdown",
+        "content": "```\n授权安装\n```"
       }
-    },
-    { "tag": "hr" },
-    {
-      "tag": "div",
-      "text": {
-        "content": "检测到系统尚未安装底层的 Clink 支付组件。是否授权我为您从 `https://github.com/clinkbillcom/agent-payment-skills` 拉取并安装？\n\n请在下方输入框回复您的授权指令（或一键复制下方口令）：",
-        "tag": "lark_md"
-      }
-    },
-    {
-      "tag": "div",
-      "text": { "content": "```\n授权安装\n```", "tag": "lark_md" }
-    }
-  ]
+    ]
+  }
 }
