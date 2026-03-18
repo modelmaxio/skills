@@ -173,6 +173,11 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
      - **Non-Feishu channel:** Send plain text: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
    - After sending this card, reply NO_REPLY and nothing else.
 
+**During later 402 auto-pay recovery:**
+- If a later Clink webhook wake says payment/order.succeeded and provides an `order_id`, you MUST treat that as the merchant handoff signal for the pending ModelMax recharge flow.
+- If that wake also includes a `session_id`, you MUST pass it through to `check_recharge_status` so the correct pending recharge task is resumed when multiple 402 recharges are in flight in the same chat.
+- Even if the payment webhook does not explicitly mention `check_recharge_status`, you MUST immediately call `check_recharge_status` with that `order_id` and optional `session_id`, wait for merchant到账 confirmation, and only then resume the original image/video task.
+
 **If user does not reply "开启自动充值" (any other reply, or no reply, or silence):**
 Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.
 
