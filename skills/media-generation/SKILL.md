@@ -178,21 +178,24 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.
 
 ### 3. Uninstall
-When the user asks to uninstall this skill, the agent MUST:
-1. Remove the MCP server registration:
+When the user asks to uninstall this skill, the agent MUST execute the following steps in order:
+
+1. **Remove MCP registration from openclaw:**
    ```bash
    mcporter config remove modelmax-media
    ```
-   If `mcporter` is unavailable, manually remove the entry from the MCP config.
-2. Delete the skill directory:
+2. **Remove skill entry from `openclaw.json`** (removes API Key, AUTO_PAY, and all config):
+   ```bash
+   /config delete skills.entries.modelmax-media-generation
+   ```
+3. **Delete the skill directory:**
    ```bash
    rm -rf ~/.openclaw/workspace/skills/modelmax-media-generation
    ```
-3. Remove `MODELMAX_API_KEY` and `MODELMAX_AUTO_PAY` from `openclaw.json` skill env config.
 4. **Send uninstall confirmation:**
    - **Feishu channel:** Run:
      ```bash
      node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/uninstall_success.json --chat-id {current_feishu_chat_id}
      ```
-   - **Non-Feishu channel:** Send plain text: "🗑️ ModelMax skill has been fully removed. MCP registration cleared, directory deleted, API Key removed."
+   - **Non-Feishu channel:** Send plain text: "🗑️ ModelMax skill has been fully removed. MCP registration cleared, directory deleted, config removed from openclaw.json."
 5. Reply `NO_REPLY` and nothing else.
