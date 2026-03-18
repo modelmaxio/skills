@@ -101,33 +101,22 @@ When an Agent is instructed to install this skill, it MUST follow these steps:
 ### 1. Initialization & Setup
 When the user activates this skill, you MUST follow these steps in order:
 
-1. **Send streaming progress card (Feishu only):**
-
+1. **Install dependencies and register MCP:**
    ```bash
-   # Step 1 — send initial card, capture message_id
-   node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"schema":"2.0","header":{"title":{"content":"⏳ 正在安装 ModelMax...","tag":"plain_text"},"template":"blue"},"body":{"elements":[{"tag":"markdown","content":"□ 安装依赖 (npm install)\n□ 注册 MCP 服务\n□ 等待 API Key"}]}}' --chat-id {current_feishu_chat_id}
-   ```
-   Parse `message_id` from the output line that starts with `message_id:`.
-
-   ```bash
-   # Step 2 — run npm install, then update card
    cd {SKILL_DIR}/scripts && npm install
-   node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"schema":"2.0","header":{"title":{"content":"⏳ 正在安装 ModelMax...","tag":"plain_text"},"template":"blue"},"body":{"elements":[{"tag":"markdown","content":"✅ 安装依赖完成\n□ 注册 MCP 服务\n□ 等待 API Key"}]}}' --update {message_id}
-
-   # Step 3 — register MCP (postinstall may have already done this), then update card
    mcporter config add modelmax-media "node {SKILL_DIR}/scripts/index.mjs" 2>/dev/null || true
-   node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"schema":"2.0","header":{"title":{"content":"⏳ 正在安装 ModelMax...","tag":"plain_text"},"template":"blue"},"body":{"elements":[{"tag":"markdown","content":"✅ 安装依赖完成\n✅ MCP 服务已注册\n□ 等待 API Key"}]}}' --update {message_id}
+   ```
 
-   # Step 4 — final update: ask for API Key
-   node {SKILL_DIR}/scripts/send-feishu-card.mjs --json '{"schema":"2.0","header":{"title":{"content":"✅ ModelMax Skills 安装成功！","tag":"plain_text"},"template":"green"},"body":{"elements":[{"tag":"markdown","content":"<font color=\"green\">**MCP 组件**</font>　　modelmax-media 已注册 ✓\n<font color=\"grey\">**API Key**</font>　　　　待配置\n<font color=\"grey\">**自动充值**</font>　　　　待配置"},{"tag":"hr"},{"tag":"markdown","content":"请直接将你的 **ModelMax API Key** 发送给我以完成激活。"},{"tag":"button","text":{"content":"🔑 获取 API Key","tag":"plain_text"},"type":"primary","url":"https://www.modelmax.io/dashboard/keys"}]}}' --update {message_id}
+2. **Send install success card (Feishu only):**
+   ```bash
+   node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}
    ```
 
    **Non-Feishu channel:** Send plain text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
 
-   **CRITICAL**: After the final update, your turn MUST end with exactly and ONLY the token NO_REPLY.
+   **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY.
 
-2. **Request API Key:** Wait for the user to provide their ModelMax API Key.
-3. **Configuration:** Guide the user to obtain an API key from [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
+3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
 4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` (do NOT omit --args):
    ```
    npx mcporter call modelmax-media check_balance --args '{}'

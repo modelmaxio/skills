@@ -7,9 +7,6 @@
  *   node send-feishu-card.mjs <card-file.json> --chat-id oc_xxx
  *   node send-feishu-card.mjs --json '<card-json>' --chat-id oc_xxx
  *   node send-feishu-card.mjs <card-file.json> --open-id ou_xxx
- *   node send-feishu-card.mjs --json '<card-json>' --update <message_id>
- *
- * Outputs: "message_id:<id>" on success (parseable by agent for streaming updates)
  */
 import fs from 'fs';
 import os from 'os';
@@ -21,11 +18,10 @@ let cardFile = null;
 let cardJsonStr = null;
 let chatId = null;
 let openId = null;
-let updateMessageId = null;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
-  if (arg === '--chat-id' || arg === '--open-id' || arg === '--json' || arg === '--update') {
+  if (arg === '--chat-id' || arg === '--open-id' || arg === '--json') {
     const val = args[i + 1];
     if (!val || val.startsWith('--')) {
       console.error(`Error: ${arg} requires a value`);
@@ -33,27 +29,23 @@ for (let i = 0; i < args.length; i++) {
       process.exit();
     }
     i++;
-    if (arg === '--chat-id')  chatId          = val;
-    if (arg === '--open-id')  openId          = val;
-    if (arg === '--json')     cardJsonStr     = val;
-    if (arg === '--update')   updateMessageId = val;
+    if (arg === '--chat-id')  chatId      = val;
+    if (arg === '--open-id')  openId      = val;
+    if (arg === '--json')     cardJsonStr = val;
   } else if (!arg.startsWith('--')) {
     cardFile = arg;
   }
 }
 
-// In update mode, --chat-id / --open-id are not required
-if (!updateMessageId) {
-  if (chatId && openId) {
-    console.error('Error: provide --chat-id or --open-id, not both');
-    process.exitCode = 1;
-    process.exit();
-  }
-  if (!chatId && !openId) {
-    console.error('Error: --chat-id or --open-id is required (or use --update <message_id>)');
-    process.exitCode = 1;
-    process.exit();
-  }
+if (chatId && openId) {
+  console.error('Error: provide --chat-id or --open-id, not both');
+  process.exitCode = 1;
+  process.exit();
+}
+if (!chatId && !openId) {
+  console.error('Error: --chat-id or --open-id is required');
+  process.exitCode = 1;
+  process.exit();
 }
 
 if (!cardFile && !cardJsonStr) {
@@ -132,33 +124,12 @@ async function sendCard(token) {
   if (!res.ok) throw new Error(`Send HTTP ${res.status}: ${res.statusText}`);
   const data = await res.json();
   if (data.code !== 0) throw new Error(`Send failed: ${data.msg} (code: ${data.code})`);
-  const messageId = data.data?.message_id;
-  console.log(`✅ Card sent (message_id: ${messageId})`);
-  console.log(`message_id:${messageId}`);
-}
-
-async function updateCard(token) {
-  const res = await fetch(
-    `https://open.feishu.cn/open-apis/im/v1/messages/${updateMessageId}`,
-    {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: JSON.stringify(card) }),
-    },
-  );
-  if (!res.ok) throw new Error(`Update HTTP ${res.status}: ${res.statusText}`);
-  const data = await res.json();
-  if (data.code !== 0) throw new Error(`Update failed: ${data.msg} (code: ${data.code})`);
-  console.log(`✅ Card updated (message_id: ${updateMessageId})`);
+  console.log(`✅ Card sent (message_id: ${data.data?.message_id})`);
 }
 
 (async () => {
   const token = await getTenantAccessToken();
-  if (updateMessageId) {
-    await updateCard(token);
-  } else {
-    await sendCard(token);
-  }
+  await sendCard(token);
 })().catch(e => {
   console.error('❌', e.message);
   process.exitCode = 1;
