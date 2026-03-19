@@ -634,7 +634,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const apiKey = process.env.MODELMAX_API_KEY;
 
   if (!apiKey) {
-    return { content: [{ type: "text", text: "Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-skills.apiKey sk-xxxx` or set the environment variable `export MODELMAX_API_KEY=\"sk-xxxx\"`." }] };
+    return { content: [{ type: "text", text: "Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx` or set the environment variable `export MODELMAX_API_KEY=\"sk-xxxx\"`." }] };
   }
 
   try {

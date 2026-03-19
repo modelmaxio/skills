@@ -114,7 +114,18 @@ When the user activates this skill, you MUST follow these steps in order:
    **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY.
 
 3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
-4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` (do NOT omit --args):
+4. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
+   - First run:
+     ```bash
+     /config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY <PASTED_KEY>
+     ```
+   - Immediately after the config command succeeds, call `check_balance` (do NOT omit --args):
+     ```bash
+     npx mcporter call modelmax-media check_balance --args '{}'
+     ```
+   - Then immediately send the auto-pay configuration card using the returned balance.
+   - After sending that card, reply `NO_REPLY` and nothing else.
+5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` (do NOT omit --args):
    ```
    npx mcporter call modelmax-media check_balance --args '{}'
    ```
