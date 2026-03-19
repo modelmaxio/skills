@@ -10,11 +10,10 @@ const BASE_URL = "https://api.modelmax.io";
 const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const CARD_SENDER = path.join(SKILL_DIR, "send-feishu-card.mjs");
 const STATE_DIR = path.join(os.homedir(), ".openclaw", "state", "modelmax-media");
+const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(os.homedir(), ".openclaw", "openclaw.json");
-// Keep only the latest interrupted task per Feishu target in memory. We
-// intentionally do not persist across process restarts in order to keep the
-// auto-pay flow simple.
-const pendingAutoPayTasks = new Map();
+// Persist pending auto-pay tasks so the recharge-confirmation flow still works
+// when ModelMax tools are invoked through short-lived mcporter subprocesses.
 
 async function loadOpenClawConfig() {
   try {
@@ -155,7 +154,48 @@ function createPendingTaskId() {
   return `task_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizePendingTaskList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") return [value];
+  return [];
+}
+
+async function readPendingAutoPayStore() {
+  try {
+    const raw = await fs.promises.readFile(PENDING_AUTO_PAY_TASK_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { tasks: {} };
+    }
+    if (!parsed.tasks || typeof parsed.tasks !== "object" || Array.isArray(parsed.tasks)) {
+      parsed.tasks = {};
+    }
+    for (const [key, value] of Object.entries(parsed.tasks)) {
+      parsed.tasks[key] = normalizePendingTaskList(value);
+    }
+    return parsed;
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return { tasks: {} };
+    }
+    console.error(`[autopay] Failed to read pending task store: ${error instanceof Error ? error.message : String(error)}`);
+    return { tasks: {} };
+  }
+}
+
+async function writePendingAutoPayStore(store) {
+  await fs.promises.mkdir(path.dirname(PENDING_AUTO_PAY_TASK_PATH), { recursive: true });
+  const nextStore = {
+    tasks: store && store.tasks && typeof store.tasks === "object" && !Array.isArray(store.tasks)
+      ? store.tasks
+      : {},
+    updatedAt: new Date().toISOString(),
+  };
+  await fs.promises.writeFile(PENDING_AUTO_PAY_TASK_PATH, JSON.stringify(nextStore, null, 2), "utf8");
+}
+
 async function writePendingAutoPayTask(task) {
+  const store = await readPendingAutoPayStore();
   const now = new Date().toISOString();
   const pendingTask = {
     id: task.id || createPendingTaskId(),
@@ -171,19 +211,38 @@ async function writePendingAutoPayTask(task) {
     rechargeConfirmedAt: task.rechargeConfirmedAt || null,
     resumeAttempts: Number(task.resumeAttempts || 0),
   };
-  pendingAutoPayTasks.set(getPendingTaskKey(pendingTask.target), pendingTask);
+  const key = getPendingTaskKey(pendingTask.target);
+  store.tasks[key] = normalizePendingTaskList(store.tasks[key]);
+  store.tasks[key].push(pendingTask);
+  await writePendingAutoPayStore(store);
   return pendingTask;
 }
 
-function claimPendingAutoPayTask(target, sessionId = null) {
+async function claimPendingAutoPayTask(target, sessionId = null) {
+  const store = await readPendingAutoPayStore();
   const key = getPendingTaskKey(target);
-  const pendingAutoPayTask = pendingAutoPayTasks.get(key);
-  if (!pendingAutoPayTask) return null;
-  if (sessionId && pendingAutoPayTask.sessionId && pendingAutoPayTask.sessionId !== sessionId) {
-    return null;
+  const currentTasks = normalizePendingTaskList(store.tasks[key]);
+  if (currentTasks.length === 0) return null;
+
+  let index = -1;
+  if (sessionId) {
+    index = currentTasks.findIndex((task) => task && task.sessionId === sessionId);
   }
-  const claimedTask = cloneJson(pendingAutoPayTask);
-  pendingAutoPayTasks.delete(key);
+  if (index < 0) {
+    index = currentTasks.findIndex((task) => task && task.status === "awaiting_payment");
+  }
+  if (index < 0) {
+    index = 0;
+  }
+
+  const [claimedTask] = currentTasks.splice(index, 1);
+  if (!claimedTask) return null;
+  if (currentTasks.length > 0) {
+    store.tasks[key] = currentTasks;
+  } else {
+    delete store.tasks[key];
+  }
+  await writePendingAutoPayStore(store);
   return claimedTask;
 }
 
@@ -568,7 +627,7 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
 }
 
 async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = null) {
-  const pendingTask = claimPendingAutoPayTask(target, sessionId);
+  const pendingTask = await claimPendingAutoPayTask(target, sessionId);
   if (!pendingTask) {
     const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
     console.error(`[autopay] No pending task found for ${targetKey} while confirming order ${orderId} session=${sessionId || "N/A"}`);
