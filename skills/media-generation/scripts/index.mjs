@@ -577,7 +577,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "check_balance",
         description: "Check the current balance of the user's ModelMax account.",
-        inputSchema: { type: "object", properties: {} }
+        inputSchema: {
+          type: "object",
+          properties: {
+            send_card: { type: "boolean", description: "Whether to send the default balance card. Defaults to true." }
+          }
+        }
       },
       {
         name: "generate_image",
@@ -659,6 +664,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (data && data.balance !== undefined) {
         const balance = Number(data.balance).toFixed(2);
         const low = Number(balance) < 5;
+        const sendCard = args.send_card !== false;
+
+        if (!sendCard) {
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                balance_usd: balance,
+                currency: "USD",
+                low_balance: low,
+              }),
+            }],
+          };
+        }
 
         const cardJson = low ? JSON.stringify({
           schema: "2.0",

@@ -119,20 +119,20 @@ When the user activates this skill, you MUST follow these steps in order:
      ```bash
      /config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY <PASTED_KEY>
      ```
-   - Immediately after the config command succeeds, call `check_balance` (do NOT omit --args):
+   - Immediately after the config command succeeds, call `check_balance` with `send_card: false` (do NOT omit --args):
      ```bash
-     npx mcporter call modelmax-media check_balance --args '{}'
+     npx mcporter call modelmax-media check_balance --args '{"send_card":false}'
      ```
    - Then immediately send the auto-pay configuration card using the returned balance.
    - After sending that card, reply `NO_REPLY` and nothing else.
-5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` (do NOT omit --args):
+5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
-   npx mcporter call modelmax-media check_balance --args '{}'
+   npx mcporter call modelmax-media check_balance --args '{"send_card":false}'
    ```
    If `check_balance` returns an error, inform the user to re-check their API key.
 
 ### 2. Automatic Top-Up Configuration
-Immediately after `check_balance` succeeds, you MUST send a card to ask about Auto-Pay:
+Immediately after `check_balance` succeeds with `send_card: false`, you MUST send a card to ask about Auto-Pay:
 
 **Feishu channel — send dynamic card via exec:**
 ```bash
@@ -154,6 +154,8 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 ```
 
 **Non-Feishu channel:** Send plain text: "API Key verified. Balance: ${balance} USD. Reply '开启自动充值' to enable auto top-up, or ignore to skip."
+
+`check_balance` supports a `send_card` parameter. During activation, you MUST call it with `{"send_card":false}` so it only returns balance data and does not end the turn early. For normal user-facing balance checks, omit the parameter and let it send the standard balance card.
 
 **Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "开启自动充值".
 
