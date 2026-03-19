@@ -148,7 +148,7 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
     { "tag": "markdown", "content": "**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='green'>{balance} USD</font>\n**自动充值**　　<font color='grey'>未开启</font>" },
     { "tag": "hr" },
     { "tag": "markdown", "content": "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：" },
-    { "tag": "plain_text", "content": "开启自动充值" }
+    { "tag": "div", "text": { "tag": "plain_text", "content": "开启自动充值" } }
   ]}
 }
 ```

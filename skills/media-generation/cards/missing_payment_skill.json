@@ -16,8 +16,8 @@
         "content": "检测到系统尚未安装底层的 Clink 支付组件。是否授权我为您从 `https://github.com/clinkbillcom/agent-payment-skills` 拉取并安装？\n\n请在下方输入框回复您的授权指令（或一键复制下方口令）："
       },
       {
-        "tag": "plain_text",
-        "content": "授权安装"
+        "tag": "div",
+        "text": { "tag": "plain_text", "content": "授权安装" }
       }
     ]
   }
