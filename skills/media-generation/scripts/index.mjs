@@ -365,7 +365,7 @@ async function handleGenerateImage(args, apiKey, options = {}) {
     const targetValue = args.open_id ?? args.chat_id;
     execFileSync(
       process.execPath,
-      [sendScript, absolutePath, targetFlag, targetValue, "--duration-seconds", String(durationSecs)],
+      [sendScript, absolutePath, targetFlag, targetValue],
       { stdio: ["pipe", "pipe", "inherit"] },
     );
     return { content: [{ type: "text", text: "NO_REPLY" }] };
