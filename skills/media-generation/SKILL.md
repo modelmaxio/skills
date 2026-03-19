@@ -188,8 +188,9 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 
 **During later 402 auto-pay recovery:**
 - If a later Clink webhook wake says payment/order.succeeded and provides an `order_id`, you MUST treat that as the merchant handoff signal for the pending ModelMax recharge flow.
-- If that wake also includes a `session_id`, you MUST pass it through to `check_recharge_status` so the correct pending recharge task is resumed when multiple 402 recharges are in flight in the same chat.
+- If that wake also includes a `session_id`, you MUST pass it through to `check_recharge_status` so the current pending ModelMax recharge task in that chat can be matched more safely.
 - Even if the payment webhook does not explicitly mention `check_recharge_status`, you MUST immediately call `check_recharge_status` with that `order_id` and optional `session_id`, wait for merchant到账 confirmation, and only then resume the original image/video task.
+- Current implementation keeps only the latest interrupted ModelMax task per chat/open_id in memory for auto-resume. If the process restarts before到账确认, the user must retry the original generation request manually.
 
 **If user does not reply "开启自动充值" (any other reply, or no reply, or silence):**
 Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.

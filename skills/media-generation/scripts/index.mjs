@@ -10,8 +10,11 @@ const BASE_URL = "https://api.modelmax.io";
 const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const CARD_SENDER = path.join(SKILL_DIR, "send-feishu-card.mjs");
 const STATE_DIR = path.join(os.homedir(), ".openclaw", "state", "modelmax-media");
-const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(os.homedir(), ".openclaw", "openclaw.json");
+// Keep only the latest interrupted task per Feishu target in memory. We
+// intentionally do not persist across process restarts in order to keep the
+// auto-pay flow simple.
+const pendingAutoPayTasks = new Map();
 
 async function loadOpenClawConfig() {
   try {
@@ -91,6 +94,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getPendingTaskKey(target) {
+  if (target.openId) return `open_id:${target.openId}`;
+  if (target.chatId) return `chat_id:${target.chatId}`;
+  return "global";
+}
+
 // Unified ModelMax API request helper. Intercepts HTTP 402 and triggers auto-pay flow.
 async function fetchModelMax(url, options, toolName, args, disableAutoPayPersistence) {
   const response = await fetch(url, options);
@@ -128,67 +137,18 @@ async function fetchModelMax(url, options, toolName, args, disableAutoPayPersist
   return response;
 }
 
-function getPendingTaskKey(target) {
-  if (target.openId) return `open_id:${target.openId}`;
-  if (target.chatId) return `chat_id:${target.chatId}`;
-  return "global";
-}
-
 function createPendingTaskId() {
   return `task_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizePendingTaskList(value) {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") return [value];
-  return [];
-}
-
-async function readPendingAutoPayStore() {
-  try {
-    const raw = await fs.promises.readFile(PENDING_AUTO_PAY_TASK_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { tasks: {} };
-    }
-    if (!parsed.tasks || typeof parsed.tasks !== "object" || Array.isArray(parsed.tasks)) {
-      parsed.tasks = {};
-    }
-    for (const [key, value] of Object.entries(parsed.tasks)) {
-      parsed.tasks[key] = normalizePendingTaskList(value);
-    }
-    return parsed;
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      return { tasks: {} };
-    }
-    console.error(`[autopay] Failed to read pending task store: ${error instanceof Error ? error.message : String(error)}`);
-    return { tasks: {} };
-  }
-}
-
-async function writePendingAutoPayStore(store) {
-  await fs.promises.mkdir(path.dirname(PENDING_AUTO_PAY_TASK_PATH), { recursive: true });
-  const nextStore = {
-    tasks: store && store.tasks && typeof store.tasks === "object" && !Array.isArray(store.tasks)
-      ? store.tasks
-      : {},
-    updatedAt: new Date().toISOString(),
-  };
-  await fs.promises.writeFile(PENDING_AUTO_PAY_TASK_PATH, JSON.stringify(nextStore, null, 2), "utf8");
-}
-
 async function writePendingAutoPayTask(task) {
-  const store = await readPendingAutoPayStore();
-  const target = normalizeFeishuTarget(task.args || {});
-  const key = getPendingTaskKey(target);
   const now = new Date().toISOString();
   const pendingTask = {
     id: task.id || createPendingTaskId(),
     version: 1,
     toolName: task.toolName,
     args: cloneJson(task.args),
-    target,
+    target: normalizeFeishuTarget(task.args || {}),
     status: task.status || "awaiting_payment",
     sessionId: task.sessionId || null,
     createdAt: task.createdAt || now,
@@ -197,80 +157,19 @@ async function writePendingAutoPayTask(task) {
     rechargeConfirmedAt: task.rechargeConfirmedAt || null,
     resumeAttempts: Number(task.resumeAttempts || 0),
   };
-  store.tasks[key] = normalizePendingTaskList(store.tasks[key]);
-  store.tasks[key].push(pendingTask);
-  await writePendingAutoPayStore(store);
+  pendingAutoPayTasks.set(getPendingTaskKey(pendingTask.target), pendingTask);
   return pendingTask;
 }
 
-async function readPendingAutoPayTasks(target) {
-  const store = await readPendingAutoPayStore();
+function claimPendingAutoPayTask(target, sessionId = null) {
   const key = getPendingTaskKey(target);
-  return normalizePendingTaskList(store.tasks[key]);
-}
-
-async function deletePendingAutoPayTask(target, taskId = null) {
-  const store = await readPendingAutoPayStore();
-  const key = getPendingTaskKey(target);
-  const currentTasks = normalizePendingTaskList(store.tasks[key]);
-  if (currentTasks.length === 0) return;
-  if (!taskId) {
-    delete store.tasks[key];
-  } else {
-    const nextTasks = currentTasks.filter((task) => task && task.id !== taskId);
-    if (nextTasks.length > 0) {
-      store.tasks[key] = nextTasks;
-    } else {
-      delete store.tasks[key];
-    }
+  const pendingAutoPayTask = pendingAutoPayTasks.get(key);
+  if (!pendingAutoPayTask) return null;
+  if (sessionId && pendingAutoPayTask.sessionId && pendingAutoPayTask.sessionId !== sessionId) {
+    return null;
   }
-  await writePendingAutoPayStore(store);
-}
-
-async function updatePendingAutoPayTask(target, taskId, updates) {
-  const store = await readPendingAutoPayStore();
-  const key = getPendingTaskKey(target);
-  const currentTasks = normalizePendingTaskList(store.tasks[key]);
-  const index = currentTasks.findIndex((task) => task && task.id === taskId);
-  if (index < 0) return null;
-  const current = currentTasks[index];
-  currentTasks[index] = {
-    ...current,
-    ...cloneJson(updates),
-    target: current.target,
-    args: updates && updates.args ? cloneJson(updates.args) : current.args,
-    updatedAt: new Date().toISOString(),
-  };
-  store.tasks[key] = currentTasks;
-  await writePendingAutoPayStore(store);
-  return currentTasks[index];
-}
-
-async function claimPendingAutoPayTask(target, sessionId = null) {
-  const store = await readPendingAutoPayStore();
-  const key = getPendingTaskKey(target);
-  const currentTasks = normalizePendingTaskList(store.tasks[key]);
-  if (currentTasks.length === 0) return null;
-
-  let index = -1;
-  if (sessionId) {
-    index = currentTasks.findIndex((task) => task && task.sessionId === sessionId);
-  }
-  if (index < 0) {
-    index = currentTasks.findIndex((task) => task && task.status === "awaiting_payment");
-  }
-  if (index < 0) {
-    index = 0;
-  }
-
-  const [claimedTask] = currentTasks.splice(index, 1);
-  if (!claimedTask) return null;
-  if (currentTasks.length > 0) {
-    store.tasks[key] = currentTasks;
-  } else {
-    delete store.tasks[key];
-  }
-  await writePendingAutoPayStore(store);
+  const claimedTask = cloneJson(pendingAutoPayTask);
+  pendingAutoPayTasks.delete(key);
   return claimedTask;
 }
 
@@ -655,10 +554,16 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
 }
 
 async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = null) {
-  const pendingTask = await claimPendingAutoPayTask(target, sessionId);
+  const pendingTask = claimPendingAutoPayTask(target, sessionId);
   if (!pendingTask) {
-    console.error(`[autopay] No pending task found for ${getPendingTaskKey(target)} while confirming order ${orderId} session=${sessionId || "N/A"}`);
-    return null;
+    const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
+    console.error(`[autopay] No pending task found for ${targetKey} while confirming order ${orderId} session=${sessionId || "N/A"}`);
+    return {
+      content: [{
+        type: "text",
+        text: `Error: Recharge was credited for order ${orderId}, but no pending ModelMax task was found to resume. Please retry the original task manually.`
+      }]
+    };
   }
 
   if (!["generate_image", "generate_video"].includes(pendingTask.toolName)) {
@@ -740,7 +645,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             order_id: { type: "string", description: "The Clink order ID from the payment webhook" },
-            session_id: { type: "string", description: "Optional Clink session ID used to match the correct pending auto-pay task when multiple recharges are in flight." },
+            session_id: { type: "string", description: "Optional Clink session ID used to match the current pending auto-pay task for this chat more safely." },
             chat_id: { type: "string", description: "Feishu chat_id for direct result card delivery" },
             open_id: { type: "string", description: "Feishu open_id for direct result card delivery" }
           },
