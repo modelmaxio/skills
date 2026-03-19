@@ -11,6 +11,29 @@ const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), 
 const CARD_SENDER = path.join(SKILL_DIR, "send-feishu-card.mjs");
 const STATE_DIR = path.join(os.homedir(), ".openclaw", "state", "modelmax-media");
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
+const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(os.homedir(), ".openclaw", "openclaw.json");
+
+async function loadOpenClawConfig() {
+  try {
+    const raw = await fs.promises.readFile(OPENCLAW_CONFIG_PATH, "utf8");
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return {};
+    }
+    throw error;
+  }
+}
+
+async function saveOpenClawConfig(config) {
+  await fs.promises.mkdir(path.dirname(OPENCLAW_CONFIG_PATH), { recursive: true });
+  await fs.promises.writeFile(OPENCLAW_CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+}
+
+async function loadCardTemplate(name) {
+  const raw = await fs.promises.readFile(path.join(SKILL_DIR, "cards", name), "utf8");
+  return JSON.parse(raw);
+}
 
 function normalizeFeishuTarget(args) {
   const chatId = typeof args.chat_id === "string" && args.chat_id.trim() ? args.chat_id.trim() : null;
@@ -310,6 +333,84 @@ async function buildAutoPayResponse(data, retryTool, args) {
     status: "awaiting_payment",
   });
   return { content: [{ type: "text", text: buildAutoPayDirective(data, retryTool) }] };
+}
+
+async function handleUninstallSkill(args = {}) {
+  const target = normalizeFeishuTarget(args);
+  const results = [];
+  let sentDirectly = false;
+  let cardError = null;
+
+  try {
+    execFileSync("mcporter", ["config", "remove", "modelmax-media"], {
+      encoding: "utf8",
+      stdio: "pipe",
+      timeout: 15000,
+    });
+    results.push("MCP 注册: 已清除 ✓");
+  } catch (error) {
+    const message = formatExecError(error);
+    if (/not found|does not exist|missing/i.test(message)) {
+      results.push("MCP 注册: 未找到，已跳过 ✓");
+    } else {
+      results.push(`MCP 注册: 清除失败 — ${message}`);
+    }
+  }
+
+  try {
+    const config = await loadOpenClawConfig();
+    if (config.skills?.entries?.["modelmax-media-generation"]) {
+      delete config.skills.entries["modelmax-media-generation"];
+      await saveOpenClawConfig(config);
+      results.push("技能配置: 已移除 ✓");
+    } else {
+      results.push("技能配置: 未找到，已跳过 ✓");
+    }
+  } catch (error) {
+    results.push(`技能配置: 移除失败 — ${formatExecError(error)}`);
+  }
+
+  try {
+    await fs.promises.rm(STATE_DIR, { recursive: true, force: true });
+    results.push("本地状态: 已清除 ✓");
+  } catch (error) {
+    results.push(`本地状态: 清除失败 — ${formatExecError(error)}`);
+  }
+
+  try {
+    const uninstallCard = await loadCardTemplate("uninstall_success.json");
+    sentDirectly = sendFeishuCardDirect(uninstallCard, target);
+    if (sentDirectly) {
+      results.push("卸载通知: 已发送 ✓");
+    } else {
+      results.push("卸载通知: 非飞书场景，未发送卡片 ✓");
+    }
+  } catch (error) {
+    cardError = error;
+    results.push(`卸载通知: 发送失败 — ${formatExecError(error)}`);
+  }
+
+  try {
+    await fs.promises.rm(SKILL_DIR, { recursive: true, force: true });
+    results.push("技能目录: 已删除 ✓");
+  } catch (error) {
+    results.push(`技能目录: 删除失败 — ${formatExecError(error)}`);
+  }
+
+  if (sentDirectly) {
+    return { content: [{ type: "text", text: "NO_REPLY" }] };
+  }
+
+  const suffix = cardError
+    ? `\n卡片发送失败：${formatExecError(cardError)}`
+    : "";
+
+  return {
+    content: [{
+      type: "text",
+      text: `ModelMax skill uninstall completed.\n${results.join("\n")}${suffix}`,
+    }],
+  };
 }
 
 async function handleGenerateImage(args, apiKey, options = {}) {
@@ -663,6 +764,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["prompt"]
         }
+      },
+      {
+        name: "uninstall_skill",
+        description: "Uninstall ModelMax skill in one ordered flow: unregister MCP, remove openclaw config, send the uninstall card, and delete the skill directory last.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            chat_id: { type: "string", description: "Feishu chat_id for direct uninstall card delivery" },
+            open_id: { type: "string", description: "Feishu open_id for direct uninstall card delivery" }
+          }
+        }
       }
     ]
   };
@@ -672,13 +784,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const toolName = request.params.name;
   const args = request.params.arguments || {};
-  const apiKey = process.env.MODELMAX_API_KEY;
-
-  if (!apiKey) {
-    return { content: [{ type: "text", text: "Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx` or set the environment variable `export MODELMAX_API_KEY=\"sk-xxxx\"`." }] };
-  }
 
   try {
+    if (toolName === "uninstall_skill") {
+      return await handleUninstallSkill(args);
+    }
+
+    const apiKey = process.env.MODELMAX_API_KEY;
+    if (!apiKey) {
+      return { content: [{ type: "text", text: "Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx` or set the environment variable `export MODELMAX_API_KEY=\"sk-xxxx\"`." }] };
+    }
+
     if (toolName === "get_payment_config") {
       let response;
       try {

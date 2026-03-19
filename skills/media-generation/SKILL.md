@@ -195,24 +195,22 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.
 
 ### 3. Uninstall
-When the user asks to uninstall this skill, the agent MUST execute the following steps in order:
+When the user asks to uninstall this skill, do NOT manually chain shell commands like `mcporter config remove`, `/config delete`, `rm -rf`, or a later card send. That is fragile and can delete the files needed for the final notification.
 
-1. **Remove MCP registration from openclaw:**
-   ```bash
-   mcporter config remove modelmax-media
-   ```
-2. **Remove skill entry from `openclaw.json`** (removes API Key, AUTO_PAY, and all config):
-   ```bash
-   /config delete skills.entries.modelmax-media-generation
-   ```
-3. **Delete the skill directory:**
-   ```bash
-   rm -rf ~/.openclaw/workspace/skills/modelmax-media-generation
-   ```
-4. **Send uninstall confirmation:**
-   - **Feishu channel:** Run:
-     ```bash
-     node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/uninstall_success.json --chat-id {current_feishu_chat_id}
-     ```
-   - **Non-Feishu channel:** Send plain text: "🗑️ ModelMax skill has been fully removed. MCP registration cleared, directory deleted, config removed from openclaw.json."
-5. Reply `NO_REPLY` and nothing else.
+Instead, the agent MUST call the dedicated MCP tool:
+
+```text
+uninstall_skill
+```
+
+Tool behavior:
+- Removes the MCP registration for `modelmax-media`
+- Removes `skills.entries.modelmax-media-generation` from `openclaw.json`
+- Clears local pending ModelMax state
+- Sends the uninstall confirmation card directly when a Feishu `chat_id` or `open_id` is provided
+- Deletes the skill directory LAST
+
+Execution rule:
+- **Feishu channel:** call `uninstall_skill` with the current `chat_id` or `open_id` so the tool itself sends the uninstall card before self-deletion
+- **Non-Feishu channel:** call `uninstall_skill`, then relay the returned plain-text completion message
+- If the tool returns `NO_REPLY`, output exactly `NO_REPLY` and nothing else
