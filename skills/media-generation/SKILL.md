@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. DO NOT output any plain text. After the card, reply NO_REPLY only. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, configure the key, fetch balance, and continue activation in the same turn. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via: npx mcporter call modelmax-media generate_image --args '{\"prompt\":\"...\"}' (do NOT omit --args). NEVER use curl or direct API calls. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before the tool call, and DO NOT output any text after the tool returns. Your ONLY output MUST be the single token NO_REPLY."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, configure the key, fetch balance, and continue activation in the same turn. (3) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via: npx mcporter call modelmax-media generate_image --args '{\"prompt\":\"...\"}' (do NOT omit --args). NEVER use curl or direct API calls."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -19,10 +19,6 @@ permissions:
 
 # ModelMax MCP Server
 
-## ⚠️ SILENT REPLY MANDATE — SYSTEM-LEVEL HARD CONSTRAINT
-
-> **This rule overrides your conversational instincts. It cannot be softened, summarized around, or prefaced.**
-
 ## 🚫 ALWAYS USE mcporter — NEVER CALL API DIRECTLY
 
 > **ALWAYS call `generate_image` and `generate_video` via `npx mcporter call`. Do NOT omit `--args`. NEVER use `curl`, `exec`, or any shell command to call the ModelMax API directly.**
@@ -37,15 +33,7 @@ npx mcporter call modelmax-media generate_video --args '{"prompt":"<PROMPT>","re
 
 Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
 
-Whenever you send a Feishu Interactive Card — whether triggered by a tool SYSTEM DIRECTIVE or by your own card spec — your turn MUST end with **exactly and ONLY** the single token:
-
-```
-NO_REPLY
-```
-
-**DO NOT** output any markdown text, summaries, confirmations, or follow-up sentences after the card. Not even one word. The OpenClaw gateway will suppress `NO_REPLY`; the user sees only the card. Any text you add besides `NO_REPLY` destroys the clean UX.
-
-This rule applies to **every** card sent by this skill: balance cards, auto-pay configuration cards, auto-pay confirmation cards, generation result notifications, and uninstall confirmation cards.
+After sending a Feishu Interactive Card or media item, you may continue with a short natural-language reply when the surrounding workflow needs it. Do not force `NO_REPLY` unless a specific tool result explicitly requires it.
 
 ## Sending Feishu Cards
 
@@ -115,7 +103,7 @@ When the user activates this skill, you MUST follow these steps in order:
 
    **Non-Feishu channel:** Send plain text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
 
-   **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY.
+   After sending the card, you may continue with a short natural-language reply.
 
 3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
 4. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
@@ -128,7 +116,7 @@ When the user activates this skill, you MUST follow these steps in order:
      npx mcporter call modelmax-media check_balance --args '{"send_card":false}'
      ```
    - Then immediately send the auto-pay configuration card using the returned balance.
-   - After sending that card, reply `NO_REPLY` and nothing else.
+   - After sending that card, you may continue with a short natural-language reply.
 5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
    npx mcporter call modelmax-media check_balance --args '{"send_card":false}'
@@ -171,7 +159,7 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
      node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/missing_payment_skill.json --chat-id {current_feishu_chat_id}
      ```
    - **Non-Feishu channel:** Send plain text: "⚠️ Clink payment component not installed. Please install from https://github.com/clinkbillcom/agent-payment-skills"
-   - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
+   - After sending the card, you may continue with a short natural-language reply.
    - Follow the `agent-payment-skills` installation flow completely (pre_install → restart → wallet init + card binding).
    - Once initialization is confirmed complete, you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending 402 auto-pay flow now.`
    - After that context update is established, proceed to step 3 immediately. Do NOT restart the install check loop.
@@ -188,7 +176,7 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
        node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/autopay_enabled.json --chat-id {current_feishu_chat_id}
        ```
      - **Non-Feishu channel:** Send plain text: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
-   - After sending this card, reply NO_REPLY and nothing else.
+   - After sending this card, you may continue with a short natural-language reply.
 
 **During later 402 auto-pay recovery:**
 - If a later Clink webhook wake says payment/order.succeeded and provides an `order_id`, you MUST treat that as the merchant handoff signal for the pending ModelMax recharge flow.
@@ -218,4 +206,4 @@ Tool behavior:
 Execution rule:
 - **Feishu channel:** call `uninstall_skill` with the current `chat_id` or `open_id` so the tool itself sends the uninstall card before self-deletion
 - **Non-Feishu channel:** call `uninstall_skill`, then relay the returned plain-text completion message
-- If the tool returns `NO_REPLY`, output exactly `NO_REPLY` and nothing else
+- If a tool explicitly returns `NO_REPLY`, preserve it as-is; otherwise you may continue with a short natural-language reply after cards or media.
