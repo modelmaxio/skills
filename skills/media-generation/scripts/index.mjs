@@ -218,12 +218,7 @@ async function writePendingAutoPayTask(task) {
   return pendingTask;
 }
 
-async function claimPendingAutoPayTask(target, sessionId = null) {
-  const store = await readPendingAutoPayStore();
-  const key = getPendingTaskKey(target);
-  const currentTasks = normalizePendingTaskList(store.tasks[key]);
-  if (currentTasks.length === 0) return null;
-
+function findPendingAutoPayTaskIndex(currentTasks, sessionId = null) {
   let index = -1;
   if (sessionId) {
     index = currentTasks.findIndex((task) => task && task.sessionId === sessionId);
@@ -234,16 +229,43 @@ async function claimPendingAutoPayTask(target, sessionId = null) {
   if (index < 0) {
     index = 0;
   }
+  return index;
+}
 
-  const [claimedTask] = currentTasks.splice(index, 1);
-  if (!claimedTask) return null;
+async function getPendingAutoPayTask(target, sessionId = null) {
+  const store = await readPendingAutoPayStore();
+  const key = getPendingTaskKey(target);
+  const currentTasks = normalizePendingTaskList(store.tasks[key]);
+  if (currentTasks.length === 0) return null;
+
+  const index = findPendingAutoPayTaskIndex(currentTasks, sessionId);
+  return currentTasks[index] || null;
+}
+
+async function removePendingAutoPayTask(target, taskId, sessionId = null) {
+  const store = await readPendingAutoPayStore();
+  const key = getPendingTaskKey(target);
+  const currentTasks = normalizePendingTaskList(store.tasks[key]);
+  if (currentTasks.length === 0) return false;
+
+  let index = -1;
+  if (taskId) {
+    index = currentTasks.findIndex((task) => task && task.id === taskId);
+  }
+  if (index < 0) {
+    index = findPendingAutoPayTaskIndex(currentTasks, sessionId);
+  }
+  if (index < 0) return false;
+
+  const [removedTask] = currentTasks.splice(index, 1);
+  if (!removedTask) return false;
   if (currentTasks.length > 0) {
     store.tasks[key] = currentTasks;
   } else {
     delete store.tasks[key];
   }
   await writePendingAutoPayStore(store);
-  return claimedTask;
+  return true;
 }
 
 function getResponseText(result) {
@@ -627,7 +649,7 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
 }
 
 async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = null) {
-  const pendingTask = await claimPendingAutoPayTask(target, sessionId);
+  const pendingTask = await getPendingAutoPayTask(target, sessionId);
   if (!pendingTask) {
     const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
     console.error(`[autopay] No pending task found for ${targetKey} while confirming order ${orderId} session=${sessionId || "N/A"}`);
@@ -667,6 +689,12 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
 
   if (resultText.startsWith("Error")) {
     return result;
+  }
+
+  try {
+    await removePendingAutoPayTask(target, pendingTask.id, sessionId);
+  } catch (error) {
+    console.error(`[autopay] Failed to remove resumed pending task ${pendingTask.id}: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return result;
