@@ -1,214 +1,144 @@
-<h1 align="center">ModelMax Skills</h1>
+# ModelMax Skills
 
-<p align="center">
-  <strong>给你的 AI Agent 一键装上图片和视频生成能力</strong>
-</p>
+English | [简体中文](README-zh.md)
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="https://modelmax.io"><img src="https://img.shields.io/badge/ModelMax-API-orange.svg?style=for-the-badge" alt="ModelMax API"></a>
-</p>
-
-<p align="center">
-  <a href="#快速上手">快速开始</a> · <a href="#支持的能力">支持的能力</a> · <a href="#配置">配置</a> · <a href="#自动充值">自动充值</a>
-</p>
+ModelMax Skills adds image generation, video generation, balance checks, and optional auto top-up to OpenClaw agents.
 
 ---
 
-## 为什么需要 ModelMax Skills？
+## What You Can Do
 
-AI Agent 能帮你写代码、改文档——但你让它帮你生成张图片或视频，它就做不到了：
+After installation, you can ask your agent to:
 
-- 🖼️ "帮我生成一张赛博朋克风格的猫" → **生成不了**，没有接入图片生成模型
-- 🎬 "帮我做一个 8 秒的产品宣传视频" → **做不了**，没有视频生成能力
-- 💰 "余额不够了" → **卡住了**，不知道怎么充值
+- Generate images from text prompts
+- Generate videos from text prompts or input images
+- Check your current ModelMax balance
+- Auto top up and resume tasks when balance is low
 
-**ModelMax Skills 把这些变成一句话的事。**
+Examples:
 
-本仓库现已全面升级为 **MCP (Model Context Protocol) Server** 标准架构，支持跨平台、跨进程的无缝挂载。
-
----
-
-## 快速上手
-
-### 通过 OpenClaw 安装（推荐）
-
-在任意 IM 消息通道（飞书、Telegram、Discord 等）中直接告诉 Agent：
-
-```
-@Claw 帮我安装 ModelMax Skills：https://github.com/modelmaxio/skills
-```
-
-或使用斜杠命令：
-
-```
-/skill install https://github.com/modelmaxio/skills
-```
-
-安装后，Agent 会引导你输入 ModelMax API Key 并自动完成配置。
-
-### 手动安装（Claude Code、Cursor 等 CLI 环境）
-
-1. 克隆本仓库并安装依赖：
-   ```bash
-   git clone https://github.com/modelmaxio/skills.git
-   cd skills/skills/media-generation/scripts
-   npm install
-   ```
-
-2. 将该脚本注册为 MCP Server：
-   ```bash
-   npx mcporter config add modelmax-media "node $(pwd)/index.mjs"
-   # 或使用 Claude Code 原生命令：
-   mcp add modelmax-media "node /绝对路径/skills/media-generation/scripts/index.mjs"
-   ```
-
-装好之后，直接用自然语言告诉 Agent：
-
-- *"帮我生成一张赛博朋克风格的猫在霓虹灯下看书"*
-- *"做一个 8 秒 1080p 的日落延时摄影视频"*
-- *"用这张图片作为起始帧，生成一个 16:9 的视频"*
-- *"查一下我的 ModelMax 余额"*
-
-**不需要记 API 参数。** Agent 读了配置后自动知道该调什么工具、传什么参数。
+- `Generate a cyberpunk cat illustration`
+- `Create an 8-second 1080p sunset video`
+- `Use this image as the first frame for a 16:9 video`
+- `Check my ModelMax balance`
 
 ---
 
-## 支持的能力
+## Video Limits
 
-| 能力 | 模型 | 说明 |
-|------|------|------|
-| 🖼️ **图片生成** | Gemini 3.1 Flash Image Preview | 文生图，默认 1024x1024 |
-| 🎬 **视频生成** | Google Veo 3.1 | 文生视频，支持 720p / 1080p / 4K |
-| 🎬 **图生视频** | Google Veo 3.1 | 提供起始帧/结束帧图片引导生成 |
-| 🔊 **视频配音** | Google Veo 3.1 | 可选音频生成 |
-| 💰 **余额查询** | — | 实时查看 ModelMax 账户余额 |
-| 🔄 **自动充值** | — | 余额不足时自动通过 Clink 充值（需配置） |
-
-### 视频参数一览
-
-| 参数 | 可选值 | 默认值 | 备注 |
-|------|--------|--------|------|
-| 分辨率 | 720p, 1080p, 4K | 720p | 1080p 和 4K 必须 8 秒 |
-| 画面比例 | 16:9, 9:16 | 16:9 | |
-| 时长 | 5-8 秒 | 8 秒 | 高分辨率锁定 8 秒 |
-| 音频 | true / false | false | |
+- Default resolution: `720p`
+- Supported resolutions: `720p`, `1080p`, `4k`
+- `1080p` and `4k` must use `8 seconds`
+- Supported aspect ratios: `16:9`, `9:16`
 
 ---
 
-## 配置
+## Install
 
-本 Skill 需要一个 **ModelMax API Key** 才能工作。
+### Ask Your Agent to Install It
 
-### 获取 API Key
-
-前往 [ModelMax](https://modelmax.io) 注册账号并获取 API Key。
-
-### 配置方式
-
-#### 消息通道（飞书、Telegram、Discord 等）
-
-安装过程中 Agent 会引导你输入 API Key，并自动写入配置。你也可以随时通过 OpenClaw 命令配置：
-
-```
-/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-your-modelmax-api-key
+```text
+Install ModelMax Skills: https://github.com/modelmaxio/skills
 ```
 
-#### CLI 环境（Claude Code、Cursor 等）
+After installation, the agent will guide you through activation.
+
+### Manual Install
 
 ```bash
-openclaw config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY "sk-your-modelmax-api-key"
+git clone https://github.com/modelmaxio/skills.git
+cd skills
+cd skills/media-generation/scripts
+npm install
+npx mcporter config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
 
-#### 直接编辑配置文件
+---
 
-编辑 `~/.openclaw/openclaw.json`：
-```json
-{
-  "skills": {
-    "entries": {
-      "modelmax-media-generation": {
-        "enabled": true,
-        "env": {
-          "MODELMAX_API_KEY": "sk-your-modelmax-api-key"
-        }
-      }
-    }
-  }
-}
-```
+## Activate
 
-#### 环境变量
+You need a ModelMax API key before using the skill.
+
+### Recommended
+
+Send your ModelMax API key directly to the agent.
+
+### OpenClaw Config
 
 ```bash
-export MODELMAX_API_KEY="sk-your-modelmax-api-key"
+/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx
 ```
 
----
-
-## 更新
-
-当 ModelMax Skills 有新版本时，告诉 Agent：
-
-```
-帮我更新 ModelMax Skills：https://github.com/modelmaxio/skills
-```
-
-Agent 会自动拉取最新代码并完成更新。
-
-如果使用了 ClawHub：
+Or:
 
 ```bash
-clawhub update modelmax-skills
+openclaw config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY "sk-xxxx"
+```
+
+### Environment Variable
+
+```bash
+export MODELMAX_API_KEY="sk-xxxx"
 ```
 
 ---
 
-## 自动充值
+## Auto Top-Up
 
-ModelMax Skills 集成了 [agent-payment-skills](https://github.com/clinkbillcom/agent-payment-skills)。开启后，余额不足时 Agent 会自动完成充值，不打断你的工作流：
+Auto top-up requires:
 
-1. 生成图片/视频时遇到余额不足（HTTP 402）
-2. Agent 自动获取 merchant ID
-3. 调用 Clink 支付（Session 模式，不需要填写金额）完成充值
-4. 充值成功后自动重试生成
+- [agent-payment-skills](https://github.com/clinkbillcom/agent-payment-skills)
 
-**首次使用时**，Agent 会询问是否开启自动充值。如果开启，需要安装 `agent-payment-skills` 并配置 Clink 支付方式。
+When enabled, the agent can recharge automatically and continue the original generation task.
 
----
+Amount rules:
 
-## 项目结构
-
-```
-modelmax-skills/
-├── README.md
-└── skills/
-    └── media-generation/         # 图片 & 视频生成
-        ├── SKILL.md              # Skill 定义与指引文档
-        └── scripts/
-            ├── index.mjs         # MCP Server 核心实现
-            ├── send-feishu-media.mjs  # 飞书图片/视频上传发送脚本
-            ├── send-feishu-card.mjs   # 飞书卡片发送脚本
-            ├── package.json      # 依赖配置 (@modelcontextprotocol/sdk)
-            └── package-lock.json
-```
-
-本仓库采用标准的 MCP 协议架构。未来可在 `skills/` 下扩展更多独立能力服务。
+- If you explicitly provide a recharge amount in the current turn, that amount is used
+- Otherwise, the system uses the merchant default amount
 
 ---
 
-## 依赖
+## Common Usage
 
-- [agent-payment-skills](https://github.com/clinkbillcom/agent-payment-skills) — 自动充值功能所需
+### Image Generation
 
-## 兼容性
+- `Generate a cyberpunk cat illustration`
+- `Create a minimalist product poster`
 
-| Agent 平台 | 支持 |
-|------------|------|
-| OpenClaw | ✅ |
-| Claude Code | ✅ |
-| Cursor | ✅ |
-| Windsurf | ✅ |
+### Video Generation
+
+- `Create an 8-second 1080p sunset video`
+- `Make a vertical 9:16 trailer from this image`
+
+### Balance Check
+
+- `Check my ModelMax balance`
+
+### Auto Top-Up
+
+- `Enable auto top-up`
+
+---
+
+## Update
+
+```text
+Update ModelMax Skills: https://github.com/modelmaxio/skills
+```
+
+## Uninstall
+
+```text
+Uninstall ModelMax Skills
+```
+
+---
+
+## Compatibility
+
+- OpenClaw
+
+---
 
 ## License
 
