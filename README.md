@@ -50,7 +50,7 @@ git clone https://github.com/modelmaxio/skills.git
 cd skills
 cd skills/media-generation/scripts
 npm install
-npx mcporter config add modelmax-media "node $(pwd)/index.bundle.mjs"
+npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
 
 ---
