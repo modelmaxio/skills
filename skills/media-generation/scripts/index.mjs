@@ -446,8 +446,8 @@ async function handleUninstallSkill(args = {}) {
 
   try {
     const config = await loadOpenClawConfig();
-    if (config.skills?.entries?.["modelmax-media-generation"]) {
-      delete config.skills.entries["modelmax-media-generation"];
+    if (config.skills?.entries?.["modelmax-media"]) {
+      delete config.skills.entries["modelmax-media"];
       await saveOpenClawConfig(config);
       results.push("技能配置: 已移除 ✓");
     } else {

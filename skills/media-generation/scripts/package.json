@@ -6,7 +6,7 @@
     "start": "node index.bundle.mjs",
     "build": "esbuild index.mjs --bundle --platform=node --format=esm --outfile=index.bundle.mjs --external:crypto --external:fs --external:path --external:os --external:https --external:fs/promises --external:stream --external:util --external:events --external:buffer --external:net --external:tls --external:http --external:http2 --minify",
     "build:dev": "esbuild index.mjs --bundle --platform=node --format=esm --outfile=index.bundle.mjs --external:crypto --external:fs --external:path --external:os --external:https --external:fs/promises --external:stream --external:util --external:events --external:buffer --external:net --external:tls --external:http --external:http2",
-    "postinstall": "(npx mcporter config add modelmax-media \"node $(pwd)/index.bundle.mjs\" || echo 'mcporter auto-registration skipped') && node setup.mjs"
+    "postinstall": "(npx mcporter --config \"${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json\" config add modelmax-media \"node $(pwd)/index.bundle.mjs\" || echo 'mcporter auto-registration skipped') && node setup.mjs"
   },
   "devDependencies": {
     "esbuild": "latest"
