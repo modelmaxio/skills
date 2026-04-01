@@ -3,6 +3,8 @@ import path from "path";
 import os from "os";
 import readline from "readline";
 
+const MCP_SERVER_NAME = "modelmax-media";
+
 function resolveOpenClawHome() {
   const explicitHome = typeof process.env.OPENCLAW_HOME === "string" ? process.env.OPENCLAW_HOME.trim() : "";
   if (explicitHome && explicitHome !== "undefined") {
@@ -36,16 +38,16 @@ rl.question("请在此输入您的 API Key (输入回车跳过): ", (answer) => 
     try {
       if (fs.existsSync(MCPORTER_CONFIG_PATH)) {
         let config = JSON.parse(fs.readFileSync(MCPORTER_CONFIG_PATH, 'utf8'));
-        if (config.mcpServers && config.mcpServers['modelmax-media']) {
+        if (config.mcpServers && config.mcpServers[MCP_SERVER_NAME]) {
             // 保留原有的 env 如果有的话
-            config.mcpServers['modelmax-media'].env = { 
-                ...config.mcpServers['modelmax-media'].env,
+            config.mcpServers[MCP_SERVER_NAME].env = { 
+                ...config.mcpServers[MCP_SERVER_NAME].env,
                 "MODELMAX_API_KEY": key 
             };
             fs.writeFileSync(MCPORTER_CONFIG_PATH, JSON.stringify(config, null, 2));
             console.log("\n🎉 API Key 已成功保存至 mcporter MCP 环境变量！");
         } else {
-            console.log("\n❌ 在 mcporter.json 中未找到 modelmax-media 服务，请确保服务已注册。");
+            console.log(`\n❌ 在 mcporter.json 中未找到 ${MCP_SERVER_NAME} 服务，请确保服务已注册。`);
         }
       } else {
         console.log(`\n❌ 未找到 mcporter.json 文件 (路径: ${MCPORTER_CONFIG_PATH})，请先完成 MCP 注册。`);

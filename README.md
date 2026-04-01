@@ -66,13 +66,13 @@ Send your ModelMax API key directly to the agent.
 ### OpenClaw Config
 
 ```bash
-/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx
+/config set skills.entries.modelmax-media.env.MODELMAX_API_KEY sk-xxxx
 ```
 
 Or:
 
 ```bash
-openclaw config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY "sk-xxxx"
+openclaw config set skills.entries.modelmax-media.env.MODELMAX_API_KEY "sk-xxxx"
 ```
 
 ### Environment Variable

@@ -1,5 +1,5 @@
 ---
-name: modelmax-media-generation
+name: modelmax-media
 description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL NOTIFICATION MANDATE: The moment this skill finishes installing, you MUST send exactly one install success notification appropriate for the current channel. Feishu may use `send-message.mjs` with a card payload; other channels should receive an equivalent markdown/text notification. (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, configure the key, fetch balance, and continue activation in the same turn. (3) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via mcporter with the explicit config path under `~/.openclaw/config/mcporter.json` (do NOT omit `--args`). NEVER use curl or direct API calls."
 version: "1.0.0"
 metadata:
@@ -162,7 +162,7 @@ When the user activates this skill, you MUST follow these steps in order:
 4. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
    - First run:
      ```bash
-     /config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY <PASTED_KEY>
+     /config set skills.entries.modelmax-media.env.MODELMAX_API_KEY <PASTED_KEY>
      ```
    - Immediately after the config command succeeds, call `check_balance` with `send_card: false` (do NOT omit --args):
      ```bash
@@ -224,7 +224,7 @@ Important:
      npx mcporter --config "$MCPORTER_CONFIG_PATH" call agent-payment-skills pre_check_account --args '{}'
      ```
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT set the env var until pre-check passes.
-   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
+   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media.env.MODELMAX_AUTO_PAY true`
    - After the exec command succeeds, **immediately** send ONE final confirmation notification:
      - Feishu may use the `autopay_enabled.json` card payload through `send-message.mjs`
      - Other channels should receive: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
@@ -262,7 +262,8 @@ uninstall_skill
 
 Tool behavior:
 - Removes the MCP registration for `modelmax-media`
-- Removes `skills.entries.modelmax-media-generation` from `openclaw.json`
+- Removes `skills.entries.modelmax-media` from `openclaw.json`
+- Removes legacy `skills.entries.modelmax-media-generation` from `openclaw.json`
 - Clears local pending ModelMax state
 - Sends the uninstall confirmation notification directly when a notify target is provided
 - Deletes the skill directory LAST

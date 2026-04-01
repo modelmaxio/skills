@@ -66,13 +66,13 @@ npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" c
 ### OpenClaw 配置
 
 ```bash
-/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx
+/config set skills.entries.modelmax-media.env.MODELMAX_API_KEY sk-xxxx
 ```
 
 或者：
 
 ```bash
-openclaw config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY "sk-xxxx"
+openclaw config set skills.entries.modelmax-media.env.MODELMAX_API_KEY "sk-xxxx"
 ```
 
 ### 环境变量

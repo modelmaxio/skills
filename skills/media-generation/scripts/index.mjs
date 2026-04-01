@@ -7,6 +7,11 @@ import os from "os";
 import { execFileSync } from "child_process";
 import { CONFIG } from "./config.mjs";
 
+const MODEL_MAX_BASE_NAME = "modelmax-media";
+const MCP_SERVER_NAME = MODEL_MAX_BASE_NAME;
+const SKILL_ENTRY_NAME = MODEL_MAX_BASE_NAME;
+const LEGACY_SKILL_ENTRY_NAMES = ["modelmax-media-generation"];
+
 function resolveOpenClawHome() {
   const explicitHome = typeof process.env.OPENCLAW_HOME === "string" ? process.env.OPENCLAW_HOME.trim() : "";
   if (explicitHome && explicitHome !== "undefined") {
@@ -21,7 +26,7 @@ const BASE_URL = CONFIG.API_BASE_URL;
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const MESSAGE_SENDER = path.join(SCRIPT_DIR, "send-message.mjs");
-const STATE_DIR = path.join(OPENCLAW_DIR, "state", "modelmax-media");
+const STATE_DIR = path.join(OPENCLAW_DIR, "state", MCP_SERVER_NAME);
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
 const ERROR_LOG_PATH = path.join(STATE_DIR, "error.log");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(OPENCLAW_DIR, "openclaw.json");
@@ -63,7 +68,7 @@ async function loadCardTemplate(name) {
 async function isModelMaxAutoPayEnabled() {
   try {
     const config = await loadOpenClawConfig();
-    const value = config?.skills?.entries?.["modelmax-media-generation"]?.env?.MODELMAX_AUTO_PAY;
+    const value = config?.skills?.entries?.[SKILL_ENTRY_NAME]?.env?.MODELMAX_AUTO_PAY;
     return value === true || value === "true";
   } catch (error) {
     const message = `[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`;
@@ -387,7 +392,7 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 2. Invoke \`agent-payment-skills.clink_pay\` with the sessionId and the ModelMax merchant_integration payload.
    If you must call via shell, use this EXACT command shape (do NOT omit --args):
    \`\`\`
-   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"sessionId":"${sessionId}","merchant_integration":{"server":"modelmax-media","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
+   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"sessionId":"${sessionId}","merchant_integration":{"server":"${MCP_SERVER_NAME}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
@@ -403,8 +408,8 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 3. Invoke \`agent-payment-skills.clink_pay\` with the merchant_id, default_amount, currency, and the ModelMax merchant_integration payload. Do NOT ask the user for an amount.
    If you must call via shell, use this EXACT command shape (do NOT omit --args):
    \`\`\`
-   ${buildMcporterCallCommand("modelmax-media", "get_payment_config", "{}")}
-   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", '{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD","merchant_integration":{"server":"modelmax-media","confirm_tool":"check_recharge_status","confirm_args":{}}}')}
+   ${buildMcporterCallCommand(MCP_SERVER_NAME, "get_payment_config", "{}")}
+   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD","merchant_integration":{"server":"${MCP_SERVER_NAME}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
@@ -429,7 +434,7 @@ async function handleUninstallSkill(args = {}) {
   let cardError = null;
 
   try {
-    execFileSync("npx", ["mcporter", "--config", MCPORTER_CONFIG_PATH, "config", "remove", "modelmax-media"], {
+    execFileSync("npx", ["mcporter", "--config", MCPORTER_CONFIG_PATH, "config", "remove", MCP_SERVER_NAME], {
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15000,
@@ -446,10 +451,22 @@ async function handleUninstallSkill(args = {}) {
 
   try {
     const config = await loadOpenClawConfig();
-    if (config.skills?.entries?.["modelmax-media"]) {
-      delete config.skills.entries["modelmax-media"];
+    const skillEntries = config.skills?.entries;
+    const skillEntryNamesToRemove = [SKILL_ENTRY_NAME, ...LEGACY_SKILL_ENTRY_NAMES];
+    const removedEntryNames = [];
+
+    if (skillEntries) {
+      for (const entryName of skillEntryNamesToRemove) {
+        if (skillEntries[entryName]) {
+          delete skillEntries[entryName];
+          removedEntryNames.push(entryName);
+        }
+      }
+    }
+
+    if (removedEntryNames.length > 0) {
       await saveOpenClawConfig(config);
-      results.push("技能配置: 已移除 ✓");
+      results.push(`技能配置: 已移除 (${removedEntryNames.join(", ")}) ✓`);
     } else {
       results.push("技能配置: 未找到，已跳过 ✓");
     }
@@ -812,7 +829,7 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
 
 // 1. Initialize MCP Server
 const server = new Server({
-  name: "modelmax-mcp-server",
+  name: MCP_SERVER_NAME,
   version: "1.0.0"
 }, {
   capabilities: { tools: {} }
@@ -928,7 +945,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     const apiKey = process.env.MODELMAX_API_KEY;
     if (!apiKey) {
-      return { content: [{ type: "text", text: "Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_API_KEY sk-xxxx` or set the environment variable `export MODELMAX_API_KEY=\"sk-xxxx\"`." }] };
+      return { content: [{ type: "text", text: `Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: \`/config set skills.entries.${SKILL_ENTRY_NAME}.env.MODELMAX_API_KEY sk-xxxx\` or set the environment variable \`export MODELMAX_API_KEY="sk-xxxx"\`.` }] };
     }
 
     if (toolName === "get_payment_config") {
