@@ -212,7 +212,7 @@ function sendViaOpenClawMessage(payload) {
     ? targetType === 'chat_id'
       ? `group:${targetId}`
       : targetType === 'open_id'
-        ? `user:${targetId}`
+        ? `dm:${targetId}`
         : targetId
     : targetId;
 
