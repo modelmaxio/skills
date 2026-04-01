@@ -53,7 +53,7 @@ npm install
 npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
 
-### 用于 OpenClaw 的安装方式
+### Installation for OpenClaw
 
 如果你是给 OpenClaw 安装，请把 Skill 放到 OpenClaw 托管的 `skills` 目录下，不要把整个仓库直接 clone 到 `~/.openclaw/workspace`：
 

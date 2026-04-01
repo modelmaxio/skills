@@ -135,31 +135,22 @@ node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"telegram","targ
 
 ## Setup & Installation
 
-When an Agent is instructed to install this skill, it MUST follow these steps:
-1. Register the MCP server:
-   ```bash
-   mcporter --config "$MCPORTER_CONFIG_PATH" config add modelmax-media "node {SKILL_DIR}/scripts/index.bundle.mjs"
-   ```
-2. If `mcporter` is not available, register manually:
-   ```bash
-   mcp add modelmax-media "node $(pwd)/scripts/index.bundle.mjs"
-   ```
+Do not duplicate installation steps in this file. When the user asks to install this skill, follow `README.md` / `README-zh.md` only:
+
+- Use `Manual Install` for standalone repo installs.
+- Use `Installation for OpenClaw` for OpenClaw-managed installs.
+- Do not substitute a partial MCP-only setup for the documented install flow.
 
 ### 1. Initialization & Setup
 When the user activates this skill, you MUST follow these steps in order:
 
-1. **Register MCP:**
-   ```bash
-   mcporter --config "$MCPORTER_CONFIG_PATH" config add modelmax-media "node {SKILL_DIR}/scripts/index.bundle.mjs" 2>/dev/null || true
-   ```
-
-2. **Send install success notification:**
+1. **Send install success notification after the documented install flow succeeds:**
    - Feishu may use `send-message.mjs` with the `install_success.json` card payload.
    - Other channels should receive the equivalent text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
    - After sending the notification, you may continue with a short natural-language reply.
 
-3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
-4. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
+2. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
+3. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
    - First run:
      ```bash
      /config set skills.entries.modelmax-media.env.MODELMAX_API_KEY <PASTED_KEY>
@@ -170,7 +161,7 @@ When the user activates this skill, you MUST follow these steps in order:
      ```
    - Then immediately send exactly one auto-pay configuration notification using the returned balance.
    - After sending that notification, you may continue with a short natural-language reply.
-5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
+4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
    npx mcporter --config "$MCPORTER_CONFIG_PATH" call modelmax-media check_balance --args '{"send_card":false}'
    ```

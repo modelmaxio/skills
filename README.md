@@ -53,7 +53,7 @@ npm install
 npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
 
-### For OpenClaw
+### Installation for OpenClaw
 
 Install the skill into OpenClaw's managed skills directory instead of cloning the whole repo into `~/.openclaw/workspace`:
 
