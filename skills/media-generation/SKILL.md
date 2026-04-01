@@ -26,11 +26,14 @@ permissions:
 ```bash
 MCPORTER_CONFIG_PATH="${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json"
 
+# Use the currently registered ModelMax MCP server name from mcporter.
+# Do NOT hardcode a stale alias in payment handoff or tool calls.
+
 # Generate image
-npx mcporter --config "$MCPORTER_CONFIG_PATH" call modelmax-media generate_image --args '{"prompt":"<PROMPT>","channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
+npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> generate_image --args '{"prompt":"<PROMPT>","channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
 
 # Generate video
-npx mcporter --config "$MCPORTER_CONFIG_PATH" call modelmax-media generate_video --args '{"prompt":"<PROMPT>","resolution":"720p","duration_seconds":5,"channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
+npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> generate_video --args '{"prompt":"<PROMPT>","resolution":"720p","duration_seconds":5,"channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
 ```
 
 Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
@@ -105,14 +108,17 @@ You MUST NOT replace the merchant default with `1`, `5`, or any other arbitrary 
 
 ModelMax should drive its own Clink payment flow and call `agent-payment-skills.clink_pay` directly.
 
+- The `merchant_integration.server` value MUST match the currently registered ModelMax MCP server name exactly.
+- Do NOT hardcode `modelmax-media` or `modelmax-media-generation` in this section unless that is the actual registered name in `mcporter`.
+
 - For session-mode flows, pass:
   - `sessionId`
-  - `merchant_integration: {"server":"modelmax-media","confirm_tool":"check_recharge_status","confirm_args":{}}`
+  - `merchant_integration: {"server":"<registered-modelmax-server>","confirm_tool":"check_recharge_status","confirm_args":{}}`
 - For direct-mode flows, call `get_payment_config` first, then pass:
   - `merchant_id`
   - `amount`
   - `currency`
-  - `merchant_integration: {"server":"modelmax-media","confirm_tool":"check_recharge_status","confirm_args":{}}`
+  - `merchant_integration: {"server":"<registered-modelmax-server>","confirm_tool":"check_recharge_status","confirm_args":{}}`
 
 ## Sending Notifications
 
@@ -157,13 +163,13 @@ When the user activates this skill, you MUST follow these steps in order:
      ```
    - Immediately after the config command succeeds, call `check_balance` with `send_card: false` (do NOT omit --args):
      ```bash
-     npx mcporter --config "$MCPORTER_CONFIG_PATH" call modelmax-media check_balance --args '{"send_card":false}'
+     npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> check_balance --args '{"send_card":false}'
      ```
    - Then immediately send exactly one auto-pay configuration notification using the returned balance.
    - After sending that notification, you may continue with a short natural-language reply.
 4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
-   npx mcporter --config "$MCPORTER_CONFIG_PATH" call modelmax-media check_balance --args '{"send_card":false}'
+   npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> check_balance --args '{"send_card":false}'
    ```
    If `check_balance` returns an error, inform the user to re-check their API key.
 

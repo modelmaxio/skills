@@ -12,6 +12,32 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+const OPENCLAW_HOME = (() => {
+  const explicitHome = typeof process.env.OPENCLAW_HOME === 'string' ? process.env.OPENCLAW_HOME.trim() : '';
+  if (explicitHome && explicitHome !== 'undefined') return explicitHome;
+  return os.homedir();
+})();
+const LOG_PATH = path.join(OPENCLAW_HOME, '.openclaw', 'state', 'modelmax-media', 'error.log');
+
+function logScriptError(context, error) {
+  const parts = [
+    `[${new Date().toISOString()}] [${context}]`,
+    error instanceof Error ? error.stack || error.message : String(error),
+  ];
+  try {
+    fs.mkdirSync(path.dirname(LOG_PATH), { recursive: true });
+    fs.appendFileSync(LOG_PATH, `${parts.join('\n')}\n`, 'utf8');
+  } catch {}
+}
+
+function fail(message, error = null) {
+  const finalMessage = error instanceof Error ? `${message}: ${error.message}` : message;
+  logScriptError('scripts/send-feishu-card', error ?? new Error(finalMessage));
+  console.error(finalMessage);
+  process.exitCode = 1;
+  process.exit();
+}
+
 // --- Parse args ---
 const args = process.argv.slice(2);
 let cardFile = null;
@@ -24,9 +50,7 @@ for (let i = 0; i < args.length; i++) {
   if (arg === '--chat-id' || arg === '--open-id' || arg === '--json') {
     const val = args[i + 1];
     if (!val || val.startsWith('--')) {
-      console.error(`Error: ${arg} requires a value`);
-      process.exitCode = 1;
-      process.exit();
+      fail(`Error: ${arg} requires a value`);
     }
     i++;
     if (arg === '--chat-id')  chatId      = val;
@@ -38,20 +62,14 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (chatId && openId) {
-  console.error('Error: provide --chat-id or --open-id, not both');
-  process.exitCode = 1;
-  process.exit();
+  fail('Error: provide --chat-id or --open-id, not both');
 }
 if (!chatId && !openId) {
-  console.error('Error: --chat-id or --open-id is required');
-  process.exitCode = 1;
-  process.exit();
+  fail('Error: --chat-id or --open-id is required');
 }
 
 if (!cardFile && !cardJsonStr) {
-  console.error('Error: provide a card file path or --json <json-string>');
-  process.exitCode = 1;
-  process.exit();
+  fail('Error: provide a card file path or --json <json-string>');
 }
 
 const receiveId     = chatId ?? openId;
@@ -70,9 +88,7 @@ try {
     card = JSON.parse(fs.readFileSync(p, 'utf-8'));
   }
 } catch (e) {
-  console.error('Error loading card:', e.message);
-  process.exitCode = 1;
-  process.exit();
+  fail('Error loading card', e);
 }
 
 // --- Load OpenClaw config ---
@@ -81,9 +97,7 @@ let config;
 try {
   config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 } catch (e) {
-  console.error('Error reading openclaw.json:', e.message);
-  process.exitCode = 1;
-  process.exit();
+  fail('Error reading openclaw.json', e);
 }
 
 const feishuConfig = config?.channels?.feishu;
@@ -99,9 +113,7 @@ const account =
 const appId = account?.appId ?? feishuConfig?.appId;
 const appSecret = account?.appSecret ?? feishuConfig?.appSecret;
 if (!appId || !appSecret) {
-  console.error('Error: Feishu account is missing appId or appSecret');
-  process.exitCode = 1;
-  process.exit();
+  fail('Error: Feishu account is missing appId or appSecret');
 }
 
 // --- Feishu API calls ---
@@ -136,6 +148,7 @@ async function sendCard(token) {
   const token = await getTenantAccessToken();
   await sendCard(token);
 })().catch(e => {
+  logScriptError('scripts/send-feishu-card', e);
   console.error('❌', e.message);
   process.exitCode = 1;
 });

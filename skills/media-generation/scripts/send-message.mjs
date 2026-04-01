@@ -1,10 +1,33 @@
 #!/usr/bin/env node
 import { execFileSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const FEISHU_CARD_SENDER = path.join(SCRIPT_DIR, 'send-feishu-card.mjs');
 const FEISHU_MEDIA_SENDER = path.join(SCRIPT_DIR, 'send-feishu-media.mjs');
+const OPENCLAW_HOME = (() => {
+  const explicitHome = typeof process.env.OPENCLAW_HOME === 'string' ? process.env.OPENCLAW_HOME.trim() : '';
+  if (explicitHome && explicitHome !== 'undefined') return explicitHome;
+  return os.homedir();
+})();
+const LOG_PATH = path.join(OPENCLAW_HOME, '.openclaw', 'state', 'modelmax-media', 'error.log');
+
+function logScriptError(context, error) {
+  const parts = [
+    `[${new Date().toISOString()}] [${context}]`,
+    error instanceof Error ? error.stack || error.message : String(error),
+  ];
+  if (error && typeof error === 'object') {
+    if (typeof error.stdout === 'string' && error.stdout.trim()) parts.push(`stdout: ${error.stdout.trim()}`);
+    if (typeof error.stderr === 'string' && error.stderr.trim()) parts.push(`stderr: ${error.stderr.trim()}`);
+  }
+  try {
+    fs.mkdirSync(path.dirname(LOG_PATH), { recursive: true });
+    fs.appendFileSync(LOG_PATH, `${parts.join('\n')}\n`, 'utf8');
+  } catch {}
+}
 
 function parseArgs(argv) {
   let payloadJson = '';
@@ -98,19 +121,6 @@ function renderCardToMarkdown(card) {
   return sections.join('\n\n').trim();
 }
 
-function buildSimpleFeishuCard(text) {
-  return {
-    schema: '2.0',
-    header: {
-      title: { content: '通知', tag: 'plain_text' },
-      template: 'blue',
-    },
-    body: {
-      elements: [{ tag: 'markdown', content: String(text || '').trim() }],
-    },
-  };
-}
-
 function normalizeTarget(payload) {
   const channel = typeof payload.channel === 'string' && payload.channel.trim()
     ? payload.channel.trim().toLowerCase()
@@ -145,9 +155,10 @@ function sendFeishuText(payload) {
     ? payload.text.trim()
     : renderCardToMarkdown(payload.card);
   if (!text) throw new Error('No text content available for Feishu delivery');
-  sendFeishuCard({
+  sendViaOpenClawMessage({
     ...payload,
-    card: buildSimpleFeishuCard(text),
+    card: undefined,
+    text,
   });
 }
 
@@ -186,10 +197,7 @@ function sendFeishuMedia(payload) {
 }
 
 function sendViaOpenClawMessage(payload) {
-  const { channel, targetId } = normalizeTarget(payload);
-  if (channel === 'feishu') {
-    throw new Error('Feishu delivery must use the Feishu adapters');
-  }
+  const { channel, targetId, targetType } = normalizeTarget(payload);
   const text = typeof payload.text === 'string' && payload.text.trim()
     ? payload.text.trim()
     : renderCardToMarkdown(payload.card);
@@ -200,18 +208,25 @@ function sendViaOpenClawMessage(payload) {
     mediaUrls.unshift(payload.mediaUrl.trim());
   }
   if (!text && mediaUrls.length === 0) throw new Error('No text or media content available for delivery');
+  const target = channel === 'feishu'
+    ? targetType === 'chat_id'
+      ? `group:${targetId}`
+      : targetType === 'open_id'
+        ? `user:${targetId}`
+        : targetId
+    : targetId;
 
   if (mediaUrls.length === 0) {
     execFileSync(
       'openclaw',
-      ['message', 'send', '--channel', channel, '--target', targetId, '--message', text],
+      ['message', 'send', '--channel', channel, '--target', target, '--message', text],
       { encoding: 'utf8', stdio: 'pipe', timeout: 30000 },
     );
     return;
   }
 
   mediaUrls.forEach((mediaUrl, index) => {
-    const args = ['message', 'send', '--channel', channel, '--target', targetId, '--media', mediaUrl];
+    const args = ['message', 'send', '--channel', channel, '--target', target, '--media', mediaUrl];
     if (index === 0 && text) {
       args.push('--message', text);
     }
@@ -234,7 +249,12 @@ async function main() {
     return;
   }
   if ((payload.card || payload.text) && channel === 'feishu' && payload.card) {
-    sendFeishuCard(payload);
+    try {
+      sendFeishuCard(payload);
+    } catch (error) {
+      logScriptError('scripts/send-message/feishu-card-fallback', error);
+      sendFeishuText(payload);
+    }
     return;
   }
   if (channel === 'feishu') {
@@ -245,6 +265,7 @@ async function main() {
 }
 
 main().catch((error) => {
+  logScriptError('scripts/send-message', error);
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
