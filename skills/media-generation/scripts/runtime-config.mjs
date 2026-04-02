@@ -29,3 +29,8 @@ export function extractConfiguredApiKey(config) {
   const value = config?.MODELMAX_API_KEY;
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
+
+export function extractConfiguredAutoPayEnabled(config) {
+  const value = config?.MODELMAX_AUTO_PAY;
+  return value === true || value === "true";
+}

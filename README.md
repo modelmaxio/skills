@@ -100,6 +100,8 @@ node scripts/set-api-key.mjs sk-xxxx
 
 This writes the key into `modelmax.config.json` inside the skill directory instead of `openclaw.json`.
 
+`MODELMAX_AUTO_PAY` is also stored in the same local `modelmax.config.json`.
+
 ### Environment Variable
 
 ```bash

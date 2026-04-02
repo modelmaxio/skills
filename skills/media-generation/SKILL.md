@@ -17,7 +17,8 @@ permissions:
 Local API key storage:
 
 - `MODELMAX_API_KEY` is stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
-- It is not stored in `openclaw.json`
+- `MODELMAX_AUTO_PAY` is also stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
+- Neither value is stored in `openclaw.json`
 
 # ModelMax MCP Server
 
@@ -222,7 +223,7 @@ Important:
      npx mcporter --config "$MCPORTER_CONFIG_PATH" call agent-payment-skills pre_check_account --args '{}'
      ```
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT enable auto top-up until pre-check passes.
-   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media.config.MODELMAX_AUTO_PAY true`
+   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `node {SKILL_DIR}/scripts/set-auto-pay.mjs true`
    - After the exec command succeeds, **immediately** send ONE final confirmation notification:
      - Feishu may use the `autopay_enabled.json` card payload through `send-message.mjs`
      - Other channels should receive: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
@@ -260,7 +261,7 @@ uninstall_skill
 
 Tool behavior:
 - Removes the MCP registration for `modelmax-media`
-- Removes `skills.entries.modelmax-media` from `openclaw.json` (for skill config such as `MODELMAX_AUTO_PAY`)
+- Removes `skills.entries.modelmax-media` from `openclaw.json` if present as legacy config
 - Removes legacy `skills.entries.modelmax-media-generation` from `openclaw.json`
 - Clears local pending ModelMax state
 - Deletes the local API key file stored at `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json` by deleting the skill directory last

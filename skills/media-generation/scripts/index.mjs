@@ -6,7 +6,12 @@ import path from "path";
 import os from "os";
 import { execFileSync } from "child_process";
 import { CONFIG } from "./config.mjs";
-import { extractConfiguredApiKey, loadSkillRuntimeConfig, saveSkillRuntimeConfig } from "./runtime-config.mjs";
+import {
+  extractConfiguredApiKey,
+  extractConfiguredAutoPayEnabled,
+  loadSkillRuntimeConfig,
+  saveSkillRuntimeConfig,
+} from "./runtime-config.mjs";
 
 const MODEL_MAX_BASE_NAME = "modelmax-media";
 const MCP_SERVER_NAME = MODEL_MAX_BASE_NAME;
@@ -119,11 +124,10 @@ async function loadCardTemplate(name) {
 
 async function isModelMaxAutoPayEnabled() {
   try {
-    const config = await loadOpenClawConfig();
-    const value = config?.skills?.entries?.[SKILL_ENTRY_NAME]?.config?.MODELMAX_AUTO_PAY;
-    return value === true || value === "true";
+    const runtimeConfig = await loadSkillRuntimeConfig();
+    return extractConfiguredAutoPayEnabled(runtimeConfig);
   } catch (error) {
-    const message = `[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`;
+    const message = `[autopay] Failed to read MODELMAX_AUTO_PAY from local skill config: ${error instanceof Error ? error.message : String(error)}`;
     console.error(message);
     await appendErrorLog(message);
     return false;

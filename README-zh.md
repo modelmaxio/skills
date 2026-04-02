@@ -100,6 +100,8 @@ node scripts/set-api-key.mjs sk-xxxx
 
 这个命令会把 Key 写入 Skill 目录下的 `modelmax.config.json`，不会写到 `openclaw.json`。
 
+`MODELMAX_AUTO_PAY` 也会存储在同一个本地 `modelmax.config.json` 中。
+
 ### 环境变量
 
 ```bash
