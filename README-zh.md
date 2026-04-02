@@ -90,17 +90,15 @@ node scripts/pre_install.mjs --channel feishu --target-id <OPEN_ID> --target-typ
 
 直接把 ModelMax API Key 发给 Agent。
 
-### OpenClaw 配置
+### Skill 本地配置
+
+在已安装的 Skill 目录（`~/.openclaw/workspace/skills/modelmax-media`）下执行：
 
 ```bash
-/config set skills.entries.modelmax-media.env.MODELMAX_API_KEY sk-xxxx
+node scripts/set-api-key.mjs sk-xxxx
 ```
 
-或者：
-
-```bash
-openclaw config set skills.entries.modelmax-media.env.MODELMAX_API_KEY "sk-xxxx"
-```
+这个命令会把 Key 写入 Skill 目录下的 `modelmax.config.json`，不会写到 `openclaw.json`。
 
 ### 环境变量
 

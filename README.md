@@ -90,17 +90,15 @@ You need a ModelMax API key before using the skill.
 
 Send your ModelMax API key directly to the agent.
 
-### OpenClaw Config
+### Local Skill Config
+
+From the installed skill directory (`~/.openclaw/workspace/skills/modelmax-media`), run:
 
 ```bash
-/config set skills.entries.modelmax-media.env.MODELMAX_API_KEY sk-xxxx
+node scripts/set-api-key.mjs sk-xxxx
 ```
 
-Or:
-
-```bash
-openclaw config set skills.entries.modelmax-media.env.MODELMAX_API_KEY "sk-xxxx"
-```
+This writes the key into `modelmax.config.json` inside the skill directory instead of `openclaw.json`.
 
 ### Environment Variable
 

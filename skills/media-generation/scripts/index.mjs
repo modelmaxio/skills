@@ -6,6 +6,7 @@ import path from "path";
 import os from "os";
 import { execFileSync } from "child_process";
 import { CONFIG } from "./config.mjs";
+import { extractConfiguredApiKey, loadSkillRuntimeConfig } from "./runtime-config.mjs";
 
 const MODEL_MAX_BASE_NAME = "modelmax-media";
 const MCP_SERVER_NAME = MODEL_MAX_BASE_NAME;
@@ -26,6 +27,7 @@ const BASE_URL = CONFIG.API_BASE_URL;
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const MESSAGE_SENDER = path.join(SCRIPT_DIR, "send-message.mjs");
+const SET_API_KEY_SCRIPT = path.join(SCRIPT_DIR, "set-api-key.mjs");
 const STATE_DIR = path.join(OPENCLAW_DIR, "state", MCP_SERVER_NAME);
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
 const ERROR_LOG_PATH = path.join(SKILL_DIR, "error.log");
@@ -53,6 +55,17 @@ async function loadOpenClawConfig() {
     }
     throw error;
   }
+}
+
+async function resolveConfiguredApiKey() {
+  const envApiKey = typeof process.env.MODELMAX_API_KEY === "string" && process.env.MODELMAX_API_KEY.trim()
+    ? process.env.MODELMAX_API_KEY.trim()
+    : null;
+  if (envApiKey) {
+    return envApiKey;
+  }
+  const runtimeConfig = await loadSkillRuntimeConfig();
+  return extractConfiguredApiKey(runtimeConfig);
 }
 
 async function loadMcporterConfig() {
@@ -983,9 +996,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await handleUninstallSkill(args);
     }
 
-    const apiKey = process.env.MODELMAX_API_KEY;
+    const apiKey = await resolveConfiguredApiKey();
     if (!apiKey) {
-      return { content: [{ type: "text", text: `Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: \`/config set skills.entries.${SKILL_ENTRY_NAME}.env.MODELMAX_API_KEY sk-xxxx\` or set the environment variable \`export MODELMAX_API_KEY="sk-xxxx"\`.` }] };
+      return { content: [{ type: "text", text: `Error: MODELMAX_API_KEY is missing. Please inform the user to configure it via: \`node ${SET_API_KEY_SCRIPT} sk-xxxx\` or set the environment variable \`export MODELMAX_API_KEY="sk-xxxx"\`.` }] };
     }
 
     if (toolName === "get_payment_config") {
