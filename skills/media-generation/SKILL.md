@@ -14,6 +14,11 @@ permissions:
   - system
 ---
 
+Local API key storage:
+
+- `MODELMAX_API_KEY` is stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
+- It is not stored in `openclaw.json`
+
 # ModelMax MCP Server
 
 ## 🚫 ALWAYS USE mcporter — NEVER CALL API DIRECTLY
@@ -255,9 +260,10 @@ uninstall_skill
 
 Tool behavior:
 - Removes the MCP registration for `modelmax-media`
-- Removes `skills.entries.modelmax-media` from `openclaw.json`
+- Removes `skills.entries.modelmax-media` from `openclaw.json` (for skill config such as `MODELMAX_AUTO_PAY`)
 - Removes legacy `skills.entries.modelmax-media-generation` from `openclaw.json`
 - Clears local pending ModelMax state
+- Deletes the local API key file stored at `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json` by deleting the skill directory last
 - Sends the uninstall confirmation notification directly when a notify target is provided
 - Deletes the skill directory LAST
 
