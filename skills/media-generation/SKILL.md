@@ -211,9 +211,9 @@ Important:
 **If user replies "开启自动充值":**
 1. **MANDATORY CHECK**: You MUST execute the `exec` tool with the command `ls -la ~/.openclaw/workspace/skills/agent-payment-skills` to physically verify if the payment skill is installed. DO NOT rely on your conversation memory.
 2. **If the directory DOES NOT exist**:
-   - Send one notification that Clink payment component is not installed and include the install URL: `https://github.com/clinkbillcom/agent-payment-skills`
-   - After sending the notification, you may continue with a short natural-language reply.
-   - Follow the `agent-payment-skills` installation flow completely (pre_install → restart → wallet init + card binding).
+   - Treat the user's explicit "开启自动充值" request as explicit authorization to install the missing dependency skill immediately.
+   - Do NOT stop at a missing-skill warning or an install URL notification.
+   - Immediately download/install `agent-payment-skills` and follow its installation flow completely (pre_install → restart → wallet init + card binding).
    - Once initialization is confirmed complete, you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending 402 auto-pay flow now.`
    - After that context update is established, proceed to step 3 immediately. Do NOT restart the install check loop.
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
