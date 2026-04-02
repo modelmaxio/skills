@@ -107,7 +107,7 @@ async function loadCardTemplate(name) {
 async function isModelMaxAutoPayEnabled() {
   try {
     const config = await loadOpenClawConfig();
-    const value = config?.skills?.entries?.[SKILL_ENTRY_NAME]?.env?.MODELMAX_AUTO_PAY;
+    const value = config?.skills?.entries?.[SKILL_ENTRY_NAME]?.config?.MODELMAX_AUTO_PAY;
     return value === true || value === "true";
   } catch (error) {
     const message = `[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`;

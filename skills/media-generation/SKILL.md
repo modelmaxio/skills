@@ -223,7 +223,7 @@ Important:
      npx mcporter --config "$MCPORTER_CONFIG_PATH" call agent-payment-skills pre_check_account --args '{}'
      ```
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT set the env var until pre-check passes.
-   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media.env.MODELMAX_AUTO_PAY true`
+   - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media.config.MODELMAX_AUTO_PAY true`
    - After the exec command succeeds, **immediately** send ONE final confirmation notification:
      - Feishu may use the `autopay_enabled.json` card payload through `send-message.mjs`
      - Other channels should receive: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
