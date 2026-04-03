@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { createMessageRequest } from './notification-utils.js';
 
 function resolveOpenClawHome() {
   const explicitHome = typeof process.env.OPENCLAW_HOME === 'string' ? process.env.OPENCLAW_HOME.trim() : '';
@@ -19,13 +20,13 @@ const OPENCLAW_DIR = path.join(OPENCLAW_HOME, '.openclaw');
 const MCPORTER_CONFIG_PATH = path.join(OPENCLAW_DIR, 'config', 'mcporter.json');
 const BUNDLE = path.join(SKILL_DIR, 'scripts', 'index.bundle.mjs');
 const MESSAGE_SENDER = path.join(SKILL_DIR, 'scripts', 'send-message.mjs');
-const INSTALL_CARD_PATH = path.join(SKILL_DIR, 'cards', 'install_success.json');
 const LOG_PATH = path.join(SKILL_DIR, 'error.log');
 
 function parseNotifyDestination(argv) {
   let channel = '';
   let targetId = '';
   let targetType = '';
+  let locale = '';
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -48,6 +49,11 @@ function parseNotifyDestination(argv) {
       i++;
       continue;
     }
+    if (arg === '--locale') {
+      locale = value.trim();
+      i++;
+      continue;
+    }
   }
 
   if (!channel && !targetId && !targetType) {
@@ -65,6 +71,7 @@ function parseNotifyDestination(argv) {
       type: targetType,
       id: targetId,
     },
+    ...(locale ? { locale } : {}),
   };
 }
 
@@ -78,15 +85,13 @@ async function logInstallError(message) {
 async function sendInstallNotification(notifyDestination) {
   const payload = {
     channel: notifyDestination.channel,
-    target: notifyDestination.target,
+    target: {
+      ...notifyDestination.target,
+      ...(notifyDestination.locale ? { locale: notifyDestination.locale } : {}),
+    },
     deliver: true,
+    ...createMessageRequest({ messageKey: 'install.success' }),
   };
-
-  if (notifyDestination.channel === 'feishu') {
-    payload.card = JSON.parse(await fs.readFile(INSTALL_CARD_PATH, 'utf8'));
-  } else {
-    payload.text = '✅ ModelMax Skills installed. Please send your ModelMax API Key to activate.';
-  }
 
   execFileSync(
     process.execPath,

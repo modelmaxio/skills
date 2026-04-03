@@ -1,6 +1,6 @@
 ---
 name: modelmax-media
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL NOTIFICATION MANDATE: The moment this skill finishes installing, you MUST send exactly one install success notification appropriate for the current channel. Feishu may use `send-message.mjs` with a card payload; other channels should receive an equivalent markdown/text notification. (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, store it via the local skill config helper, fetch balance, and continue activation in the same turn. (3) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via mcporter with the explicit config path under `~/.openclaw/config/mcporter.json` (do NOT omit `--args`). NEVER use curl or direct API calls."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL NOTIFICATION MANDATE: The moment this skill finishes installing, you MUST send exactly one install success notification through `send-message.mjs` using the unified `message_key + vars` payload. (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, store it via the local skill config helper, fetch balance, and continue activation in the same turn. (3) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via mcporter with the explicit config path under `~/.openclaw/config/mcporter.json` (do NOT omit `--args`). NEVER use curl or direct API calls."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -127,11 +127,11 @@ ModelMax should drive its own Clink payment flow and call `agent-payment-skills.
 This skill includes a standalone notification sender:
 
 ```bash
-# Send a Feishu card payload
-node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"feishu","target":{"type":"chat_id","id":"oc_xxx"},"card":{"config":{},"header":{},"elements":[]}}'
+# Send a localized notification payload
+node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"feishu","target":{"type":"chat_id","id":"oc_xxx","locale":"zh-CN"},"message_key":"install.success","vars":{}}'
 
-# Send an equivalent markdown/text notification to another channel
-node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"telegram","target":{"type":"target_id","id":"12345"},"text":"✅ ModelMax installed. Please send your API Key to activate."}'
+# Send the same semantic notification to another channel
+node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"telegram","target":{"type":"target_id","id":"12345","locale":"en-US"},"message_key":"install.success","vars":{}}'
 ```
 
 ## Features
@@ -155,8 +155,7 @@ When the user activates this skill, you MUST follow these steps in order:
 
 1. **Send install success notification immediately after the documented install flow succeeds:**
    - For OpenClaw-managed installs, prefer `scripts/pre_install.mjs`; it registers the MCP server and sends the install success notification directly.
-   - Feishu may use `send-message.mjs` with the `install_success.json` card payload.
-   - Other channels should receive the equivalent text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
+   - All channels should use the unified `message_key` payload: `{"message_key":"install.success","vars":{}}`.
    - Do not delay the install notification waiting for any later restart/status callback.
    - After sending the notification, you may continue with a short natural-language reply.
 
@@ -186,26 +185,10 @@ Route generic auto-top-up language by active merchant context, not by keyword al
 - Call or install `agent-payment-skills` only as a dependency for wallet/payment setup, then resume the ModelMax flow immediately after that dependency work completes.
 - If the user explicitly asks for Clink setup, payment wallet setup, card binding, or payment-method management as the primary intent, that infrastructure request may belong to `agent-payment-skills` instead of ModelMax.
 
-**Feishu channel — you may send a structured card notification:**
+**Any channel — send the unified semantic payload:**
 ```bash
-node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"feishu","target":{"type":"chat_id","id":"<TARGET_ID>"},"card":<CARD_JSON>}'
+node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"<CHANNEL>","target":{"type":"<TARGET_TYPE>","id":"<TARGET_ID>","locale":"<LOCALE>"},"message_key":"config.verified","vars":{"balance":"<BALANCE>","autoPayEnabled":false}}'
 ```
-
-Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the actual value from `check_balance`. Use single quotes around the JSON to prevent shell interpolation:
-```json
-{
-  "schema": "2.0",
-  "header": { "title": { "content": "ModelMax Configuration", "tag": "plain_text" }, "template": "blue" },
-  "body": { "elements": [
-    { "tag": "markdown", "content": "**API Key Status**  <font color='green'>Verified ✓</font>\n**Current Balance**  <font color='green'>{balance} USD</font>\n**Auto Top-Up**  <font color='grey'>Disabled</font>" },
-    { "tag": "hr" },
-    { "tag": "markdown", "content": "When your balance runs low, auto top-up keeps image and video generation from being interrupted. It is disabled by default. To enable it, reply with 'Enable auto top-up' or an equivalent phrase in your language:" },
-    { "tag": "markdown", "content": "Enable auto top-up" }
-  ]}
-}
-```
-
-**Non-Feishu channel:** Send equivalent markdown/text: "API Key verified. Balance: ${balance} USD. Reply 'Enable auto top-up' or an equivalent phrase in your language to enable auto top-up, or ignore to skip."
 
 `check_balance` supports a `send_card` parameter. During activation, you MUST call it with `{"send_card":false}` so it only returns balance data and does not end the turn early. For normal user-facing balance checks, omit the parameter and let it send the standard balance notification.
 
@@ -233,8 +216,7 @@ Important:
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT enable auto top-up until pre-check passes.
    - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `node {SKILL_DIR}/scripts/set-auto-pay.mjs true`
    - After the exec command succeeds, **immediately** send ONE final confirmation notification:
-     - Feishu may use the `autopay_enabled.json` card payload through `send-message.mjs`
-     - Other channels should receive: "✅ Auto top-up enabled. Your account will be recharged automatically when balance runs low."
+     - All channels should use the unified payload: `{"message_key":"autopay.enabled","vars":{}}`
    - After sending this notification, you may continue with a short natural-language reply.
 
 **During later 402 auto-pay recovery:**
