@@ -399,6 +399,45 @@ export function renderMessageMarkdown(input, options = {}) {
   return sections.filter(Boolean).join('\n\n').trim();
 }
 
+function buildTelegramHeaderSections(model) {
+  const sections = [];
+  if (model.title) sections.push(`**${model.title}**`);
+  if (model.summary) sections.push(model.summary);
+  return sections.filter(Boolean);
+}
+
+function buildTelegramBodySections(model) {
+  const sections = [];
+  if (model.facts.length > 0) {
+    sections.push(model.facts.map((fact) => `**${fact.label}** ${fact.value}`).join('\n'));
+  }
+  if (model.sections.length > 0) {
+    sections.push(model.sections.map((section) => section.text).join('\n\n'));
+  }
+  if (model.actions.length > 0) {
+    sections.push(model.actions.map((action) => (
+      action.type === 'url' && action.url
+        ? `- [${action.label}](${action.url})`
+        : `- ${action.label}`
+    )).join('\n'));
+  }
+  if (model.footer) sections.push(model.footer);
+  return sections.filter(Boolean);
+}
+
+export function renderMessageTelegramText(input, options = {}) {
+  const model = input?.message_key ? compileMessage(input, options) : input;
+  const header = buildTelegramHeaderSections(model);
+  const body = buildTelegramBodySections(model);
+  if (header.length > 0 && body.length > 0) {
+    return `${header.join('\n\n')}\n\n━━━━━━━━━━\n\n${body.join('\n\n')}`.trim();
+  }
+  if (header.length > 0) {
+    return header.join('\n\n').trim();
+  }
+  return body.join('\n\n').trim();
+}
+
 export function renderMessageFeishuCard(input, options = {}) {
   const model = input?.message_key ? compileMessage(input, options) : input;
   const elements = [];
