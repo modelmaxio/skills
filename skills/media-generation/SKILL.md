@@ -42,7 +42,7 @@ Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
 
 Note: `mcporter call` defaults to a 60s timeout. Use `--timeout 300000` for ModelMax media generation so video polling can finish.
 
-After sending a notification or media item, you may continue with a short natural-language reply when the surrounding workflow needs it. Do not force `NO_REPLY` unless a specific tool result explicitly requires it.
+After sending a notification or media item, you may continue with a short natural-language reply when the surrounding workflow needs it. Prefer `DIRECT_SEND` for direct-delivery success paths.
 
 ## Card Ownership Matrix (Hard Rule)
 
@@ -83,8 +83,6 @@ For ModelMax, `check_recharge_status` is the only owner of merchant-layer rechar
 - `DATA_ONLY`
   - Meaning: the tool returned data only
   - Agent may send the next required notification defined by this skill
-- `NO_REPLY`
-  - Meaning: preserve exactly; do not append text, cards, or retries
 
 ## Prohibited Behaviors (Hard Rule)
 
@@ -264,4 +262,4 @@ Tool behavior:
 Execution rule:
 - Call `uninstall_skill` with the current notify target when available so the tool itself can send the uninstall notification before self-deletion.
 - If no direct target is available, call `uninstall_skill`, then relay the returned completion message.
-- If a tool explicitly returns `NO_REPLY`, preserve it as-is; otherwise you may continue with a short natural-language reply after notifications or media.
+- Follow `DIRECT_SEND` / normal reply behavior and avoid duplicate notifications or media.
